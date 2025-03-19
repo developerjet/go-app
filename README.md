@@ -1,6 +1,6 @@
 # Go App
 
-一个基于 Gin 框架的用户管理系统。
+一个基于 Gin 框架的用户相关应用。
 
 ## 功能特性
 
@@ -32,36 +32,55 @@
 1. 克隆项目
 ```bash
 git clone https://github.com/yourusername/go-app.git
-cd go-app
+```
 
-2.安装依赖
+2. 安装依赖
+```bash
+cd go-app
+go mod download
+```
+3. 配置数据库
+- 在 config/config.go 文件中配置数据库连接信息
+4. 初始化数据库
+```bash
+go run main.go init
+```
+4. 安装依赖         
+go mod download
 ```bash
 go mod tidy
+```
 
-3.运行项目
+5. 运行项目
 ```bash
 go run main.go
+```
 
-4.运行项目须注意⚠️
+6. 运行项目须注意⚠️
 - 查找所有运行中的 Go 进程：
 ```bash
 ps aux | grep go
+```
 
 - 找到并终止所有相关的 Go 进程
 ```bash
 pkill -f "go"
+```
 
 - 如果想要更精确地只终止特定的项目进程：
 ```bash
 pkill -f "go_app"
+```
 
 - 如果上述命令不能完全终止进程，可以使用更强制的方式
 ```bash
 pkill -9 -f "go_app"
+```
 
 5.重新启动项目
 ```bash
 go run main.go
+```
 
 > 服务将在 http://localhost:8080 启动
 
@@ -69,10 +88,12 @@ go run main.go
 ## 数据库配置
 
 ### 连接信息
+在 config/config.go 文件中配置数据库连接信息。
+```go
 dsn := "root:123456@tcp(127.0.0.1:3306)/go_app?charset=utf8mb4&parseTime=True&loc=Local"
+```
 
 ### 默认配置：
-
 - 主机：localhost (127.0.0.1)
 - 端口：3306
 - 用户名：root

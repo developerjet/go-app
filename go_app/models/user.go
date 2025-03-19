@@ -15,21 +15,6 @@ type User struct {
     UpdatedAt time.Time `json:"updatedAt" gorm:"column:updated_at"`
 }
 
-// LoginRequest 登录请求
-// @Description 用户登录请求参数
-type LoginRequest struct {
-    Email    string `json:"email" binding:"required,email" example:"zhangsan@example.com"`
-    Password string `json:"password" binding:"required" example:"123456"`
-}
-
-// RegisterRequest 注册请求
-// @Description 用户注册请求参数
-type RegisterRequest struct {
-    Username string `json:"username" binding:"required" example:"张三"`  // 改为 Username
-    Email    string `json:"email" binding:"required,email" example:"zhangsan@example.com"`
-    Password string `json:"password" binding:"required" example:"123456"`
-}
-
 // EmailUpdate 邮箱更新请求
 // @Description 用户邮箱更新请求参数
 type EmailUpdate struct {

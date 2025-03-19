@@ -24,6 +24,59 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/api/users/password": {
+            "post": {
+                "description": "用户修改自己的密码",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "用户管理"
+                ],
+                "summary": "修改用户密码",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "用户令牌",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "密码修改请求",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.PasswordChangeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/models.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "未授权",
+                        "schema": {
+                            "$ref": "#/definitions/models.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/login": {
             "post": {
                 "description": "用户登录并获取token",
@@ -371,6 +424,7 @@ const docTemplate = `{
     },
     "definitions": {
         "models.EmailUpdate": {
+            "description": "用户邮箱更新请求参数",
             "type": "object",
             "required": [
                 "email"
@@ -383,7 +437,6 @@ const docTemplate = `{
             }
         },
         "models.LoginRequest": {
-            "description": "用户登录请求参数",
             "type": "object",
             "required": [
                 "email",
@@ -400,31 +453,44 @@ const docTemplate = `{
                 }
             }
         },
-        "models.RegisterRequest": {
-            "description": "用户注册请求参数",
+        "models.PasswordChangeRequest": {
             "type": "object",
             "required": [
-                "age",
-                "email",
-                "name",
-                "password"
+                "newPassword",
+                "oldPassword"
             ],
             "properties": {
-                "age": {
-                    "type": "integer",
-                    "example": 25
+                "newPassword": {
+                    "type": "string",
+                    "minLength": 6,
+                    "example": "654321"
                 },
+                "oldPassword": {
+                    "type": "string",
+                    "example": "123456"
+                }
+            }
+        },
+        "models.RegisterRequest": {
+            "type": "object",
+            "required": [
+                "email",
+                "password",
+                "username"
+            ],
+            "properties": {
                 "email": {
                     "type": "string",
                     "example": "zhangsan@example.com"
                 },
-                "name": {
-                    "type": "string",
-                    "example": "张三"
-                },
                 "password": {
                     "type": "string",
+                    "minLength": 6,
                     "example": "123456"
+                },
+                "username": {
+                    "type": "string",
+                    "example": "张三"
                 }
             }
         },
@@ -434,7 +500,7 @@ const docTemplate = `{
                 "data": {},
                 "error": {
                     "type": "string",
-                    "example": "错误信息"
+                    "example": "参数错误"
                 },
                 "message": {
                     "type": "string",
@@ -455,21 +521,20 @@ const docTemplate = `{
             "description": "用户信息",
             "type": "object",
             "properties": {
-                "age": {
-                    "type": "integer",
-                    "example": 25
+                "createdAt": {
+                    "type": "string"
                 },
                 "email": {
-                    "type": "string",
-                    "example": "zhangsan@example.com"
+                    "type": "string"
                 },
                 "id": {
-                    "type": "integer",
-                    "example": 1
+                    "type": "integer"
                 },
-                "name": {
-                    "type": "string",
-                    "example": "张三"
+                "updatedAt": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
                 }
             }
         },
@@ -481,7 +546,7 @@ const docTemplate = `{
                     "example": "操作成功"
                 },
                 "user": {
-                    "$ref": "#/definitions/models.User"
+                    "type": "object"
                 }
             }
         }

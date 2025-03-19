@@ -3,35 +3,42 @@ package utils
 import (
     "errors"
     "time"
-    "github.com/golang-jwt/jwt"
+    "github.com/golang-jwt/jwt/v4"  // 更新为 v4 版本
 )
+
+// Claims 自定义的 JWT Claims
+type Claims struct {
+    UserID uint `json:"userId"`  // 添加 json 标签
+    jwt.StandardClaims
+}
 
 var jwtSecret = []byte("your_jwt_secret_key")
 
 func GenerateToken(userID uint) (string, error) {
-    claims := jwt.MapClaims{
-        "user_id": userID,
-        "exp":     time.Now().Add(time.Hour * 24).Unix(),
+    claims := &Claims{
+        UserID: userID,
+        StandardClaims: jwt.StandardClaims{
+            ExpiresAt: time.Now().Add(time.Hour * 24).Unix(),
+            IssuedAt:  time.Now().Unix(),
+        },
     }
-
+    
     token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-    return token.SignedString(jwtSecret)
+    return token.SignedString(jwtSecret) // 使用 jwtSecret 替换 secretKey
 }
 
-// 添加验证 token 的函数
-func ParseToken(tokenString string) (uint, error) {
-    token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-        return jwtSecret, nil
+func ParseToken(tokenString string) (*Claims, error) {
+    token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
+        return jwtSecret, nil // 使用 jwtSecret 替换 secretKey
     })
-
+    
     if err != nil {
-        return 0, err
+        return nil, err
     }
-
-    if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-        userID := uint(claims["user_id"].(float64))
-        return userID, nil
+    
+    if claims, ok := token.Claims.(*Claims); ok && token.Valid {
+        return claims, nil
     }
-
-    return 0, errors.New("invalid token")
+    
+    return nil, errors.New("invalid token")
 }

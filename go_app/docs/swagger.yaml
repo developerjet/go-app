@@ -1,6 +1,7 @@
 basePath: /api
 definitions:
   models.EmailUpdate:
+    description: 用户邮箱更新请求参数
     properties:
       email:
         example: new_email@example.com
@@ -9,7 +10,6 @@ definitions:
     - email
     type: object
   models.LoginRequest:
-    description: 用户登录请求参数
     properties:
       email:
         example: zhangsan@example.com
@@ -21,32 +21,41 @@ definitions:
     - email
     - password
     type: object
-  models.RegisterRequest:
-    description: 用户注册请求参数
+  models.PasswordChangeRequest:
     properties:
-      age:
-        example: 25
-        type: integer
-      email:
-        example: zhangsan@example.com
+      newPassword:
+        example: "654321"
+        minLength: 6
         type: string
-      name:
-        example: 张三
-        type: string
-      password:
+      oldPassword:
         example: "123456"
         type: string
     required:
-    - age
+    - newPassword
+    - oldPassword
+    type: object
+  models.RegisterRequest:
+    properties:
+      email:
+        example: zhangsan@example.com
+        type: string
+      password:
+        example: "123456"
+        minLength: 6
+        type: string
+      username:
+        example: 张三
+        type: string
+    required:
     - email
-    - name
     - password
+    - username
     type: object
   models.Response:
     properties:
       data: {}
       error:
-        example: 错误信息
+        example: 参数错误
         type: string
       message:
         example: 操作成功
@@ -61,17 +70,15 @@ definitions:
   models.User:
     description: 用户信息
     properties:
-      age:
-        example: 25
-        type: integer
+      createdAt:
+        type: string
       email:
-        example: zhangsan@example.com
         type: string
       id:
-        example: 1
         type: integer
-      name:
-        example: 张三
+      updatedAt:
+        type: string
+      username:
         type: string
     type: object
   models.UserResponse:
@@ -80,7 +87,7 @@ definitions:
         example: 操作成功
         type: string
       user:
-        $ref: '#/definitions/models.User'
+        type: object
     type: object
 host: localhost:8080
 info:
@@ -96,6 +103,41 @@ info:
   title: Go App API
   version: "1.0"
 paths:
+  /api/users/password:
+    post:
+      consumes:
+      - application/json
+      description: 用户修改自己的密码
+      parameters:
+      - description: 用户令牌
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: 密码修改请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.PasswordChangeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Response'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/models.Response'
+        "401":
+          description: 未授权
+          schema:
+            $ref: '#/definitions/models.Response'
+      summary: 修改用户密码
+      tags:
+      - 用户管理
   /login:
     post:
       consumes:

@@ -33,7 +33,8 @@ func (s *UserService) GetUserByEmail(email string) (*models.User, error) {
 }
 
 func (s *UserService) UpdateUser(user *models.User) error {
-    return s.db.Save(user).Error
+    result := s.db.Save(user)
+    return result.Error
 }
 
 func (s *UserService) DeleteUser(id uint) error {
@@ -76,4 +77,30 @@ func (s *UserService) Login(email, password string) (*models.LoginResponse, erro
         Token:    token,
         UserInfo: &user,  // 修改这里，传递指针
     }, nil
+}
+
+// ChangePassword 修改用户密码
+func (s *UserService) ChangePassword(userID uint, oldPassword, newPassword string) error {
+    var user models.User
+    if err := s.db.First(&user, userID).Error; err != nil {
+        return errors.New("用户不存在")
+    }
+
+    // 验证旧密码
+    if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(oldPassword)); err != nil {
+        return errors.New("旧密码不正确")
+    }
+
+    // 加密新密码
+    hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+    if err != nil {
+        return errors.New("密码加密失败")
+    }
+
+    // 更新密码
+    if err := s.db.Model(&user).Update("password", string(hashedPassword)).Error; err != nil {
+        return errors.New("密码更新失败")
+    }
+
+    return nil
 }

@@ -28,19 +28,17 @@ func NewUserController(userService *services.UserService) *UserController {
 // @Failure 401 {object} models.Response
 // @Router /login [post]
 func (uc *UserController) Login(c *gin.Context) {
-    var loginRequest struct {
-        Email    string `json:"email" binding:"required,email"`
-        Password string `json:"password" binding:"required"`
-    }
+    var loginRequest models.LoginRequest  // 使用 models 包中定义的类型，删除重复声明
 
     if err := c.ShouldBindJSON(&loginRequest); err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "请求参数错误"})
+        c.JSON(http.StatusBadRequest, models.Response{Error: "请求参数错误"})
         return
     }
 
     response, err := uc.userService.Login(loginRequest.Email, loginRequest.Password)
+    // Login 方法中的响应格式
     if err != nil {
-        c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+        c.JSON(http.StatusUnauthorized, models.Response{Error: err.Error()})
         return
     }
 
@@ -56,8 +54,9 @@ func (uc *UserController) Login(c *gin.Context) {
 // @Failure 500 {object} models.Response
 // @Security ApiKeyAuth
 // @Router /users [get]
-func (c *UserController) ListUsers(ctx *gin.Context) {
-	users, err := c.userService.ListUsers()
+// 将 'c' 改为 'uc' 以保持一致性
+func (uc *UserController) ListUsers(ctx *gin.Context) {
+    users, err := uc.userService.ListUsers()
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, models.Response{Error: err.Error()})
 		return
@@ -75,27 +74,28 @@ func (c *UserController) ListUsers(ctx *gin.Context) {
 // @Failure 400,404 {object} models.Response
 // @Security ApiKeyAuth
 // @Router /users/{id} [get]
-func (c *UserController) GetUser(ctx *gin.Context) {
-	// 从路径参数获取用户ID
-	userID := ctx.Param("id")
-	if userID == "" {
-		ctx.JSON(http.StatusBadRequest, models.Response{Error: "用户ID不能为空"})
-		return
-	}
+// GetUser godoc
+func (uc *UserController) GetUser(ctx *gin.Context) {  // 将 c 改为 uc
+    // 从路径参数获取用户ID
+    userID := ctx.Param("id")
+    if userID == "" {
+        ctx.JSON(http.StatusBadRequest, models.Response{Error: "用户ID不能为空"})
+        return
+    }
 
-	id, err := strconv.ParseUint(userID, 10, 32)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, models.Response{Error: "无效的用户ID"})
-		return
-	}
+    id, err := strconv.ParseUint(userID, 10, 32)
+    if err != nil {
+        ctx.JSON(http.StatusBadRequest, models.Response{Error: "无效的用户ID"})
+        return
+    }
 
-	user, err := c.userService.GetUserByID(uint(id))
-	if err != nil {
-		ctx.JSON(http.StatusNotFound, models.Response{Error: "用户不存在"})
-		return
-	}
+    user, err := uc.userService.GetUserByID(uint(id))  // 将 c 改为 uc
+    if err != nil {
+        ctx.JSON(http.StatusNotFound, models.Response{Error: "用户不存在"})
+        return
+    }
 
-	ctx.JSON(http.StatusOK, models.Response{Data: user})
+    ctx.JSON(http.StatusOK, models.Response{Data: user})
 }
 
 // UpdateUser godoc
@@ -110,20 +110,25 @@ func (c *UserController) GetUser(ctx *gin.Context) {
 // @Failure 400,500 {object} models.Response
 // @Security ApiKeyAuth
 // @Router /users/{id} [post]
-func (c *UserController) UpdateUser(ctx *gin.Context) {
-	id, _ := strconv.ParseUint(ctx.Param("id"), 10, 32)
-	var user models.User
-	if err := ctx.ShouldBindJSON(&user); err != nil {
-		ctx.JSON(http.StatusBadRequest, models.Response{Error: err.Error()})
-		return
-	}
-	user.ID = uint(id)
+// UpdateUser
+func (uc *UserController) UpdateUser(ctx *gin.Context) {
+    id, err := strconv.ParseUint(ctx.Param("id"), 10, 32)
+    if err != nil {
+        ctx.JSON(http.StatusBadRequest, models.Response{Error: "无效的用户ID"})
+        return
+    }
+    var user models.User
+    if err := ctx.ShouldBindJSON(&user); err != nil {
+        ctx.JSON(http.StatusBadRequest, models.Response{Error: err.Error()})
+        return
+    }
+    user.ID = uint(id)
 
-	if err := c.userService.UpdateUser(&user); err != nil {
-		ctx.JSON(http.StatusInternalServerError, models.Response{Error: err.Error()})
-		return
-	}
-	ctx.JSON(http.StatusOK, models.Response{Data: user})
+    if err := uc.userService.UpdateUser(&user); err != nil {  // 将 c 改为 uc
+        ctx.JSON(http.StatusInternalServerError, models.Response{Error: err.Error()})
+        return
+    }
+    ctx.JSON(http.StatusOK, models.Response{Data: user})
 }
 
 // DeleteUser godoc
@@ -136,13 +141,18 @@ func (c *UserController) UpdateUser(ctx *gin.Context) {
 // @Failure 500 {object} models.Response
 // @Security ApiKeyAuth
 // @Router /users/{id}/delete [post]
-func (c *UserController) DeleteUser(ctx *gin.Context) {
-	id, _ := strconv.ParseUint(ctx.Param("id"), 10, 32)
-	if err := c.userService.DeleteUser(uint(id)); err != nil {
-		ctx.JSON(http.StatusInternalServerError, models.Response{Error: err.Error()})
-		return
-	}
-	ctx.JSON(http.StatusOK, models.Response{Message: "用户已删除"})
+// DeleteUser
+func (uc *UserController) DeleteUser(ctx *gin.Context) {
+    id, err := strconv.ParseUint(ctx.Param("id"), 10, 32)
+    if err != nil {
+        ctx.JSON(http.StatusBadRequest, models.Response{Error: "无效的用户ID"})
+        return
+    }
+    if err := uc.userService.DeleteUser(uint(id)); err != nil {  // 将 c 改为 uc
+        ctx.JSON(http.StatusInternalServerError, models.Response{Error: err.Error()})
+        return
+    }
+    ctx.JSON(http.StatusOK, models.Response{Message: "用户已删除"})
 }
 
 // Register godoc
@@ -158,7 +168,7 @@ func (c *UserController) DeleteUser(ctx *gin.Context) {
 func (uc *UserController) Register(c *gin.Context) {
     var req models.RegisterRequest
     if err := c.ShouldBindJSON(&req); err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "请求参数错误"})
+        c.JSON(http.StatusBadRequest, models.Response{Error: "请求参数错误"})
         return
     }
 
@@ -210,51 +220,91 @@ func (uc *UserController) Register(c *gin.Context) {
 // @Failure 400 {object} models.Response
 // @Security ApiKeyAuth
 // @Router /users/{id}/email [post]
-func (c *UserController) UpdateEmail(ctx *gin.Context) {
-	// 获取用户ID
-	userID := ctx.Param("id")
-	if userID == "" {
-		ctx.JSON(http.StatusBadRequest, models.Response{Error: "用户ID不能为空"})
-		return
-	}
+// UpdateEmail
+func (uc *UserController) UpdateEmail(ctx *gin.Context) {
+    // 获取用户ID
+    userID := ctx.Param("id")
+    if userID == "" {
+        ctx.JSON(http.StatusBadRequest, models.Response{Error: "用户ID不能为空"})
+        return
+    }
 
-	id, err := strconv.ParseUint(userID, 10, 32)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, models.Response{Error: "无效的用户ID"})
-		return
-	}
+    id, err := strconv.ParseUint(userID, 10, 32)
+    if err != nil {
+        ctx.JSON(http.StatusBadRequest, models.Response{Error: "无效的用户ID"})
+        return
+    }
 
-	// 获取新邮箱
-	type EmailUpdate struct {
-		Email string `json:"email" binding:"required,email"`
-	}
-	var update EmailUpdate
-	if err := ctx.ShouldBindJSON(&update); err != nil {
-		ctx.JSON(http.StatusBadRequest, models.Response{Error: err.Error()})
-		return
-	}
+    // 获取新邮箱
+    type EmailUpdate struct {
+        Email string `json:"email" binding:"required,email"`
+    }
+    var update models.EmailUpdate  // 使用 models 包中定义的类型
+    if err := ctx.ShouldBindJSON(&update); err != nil {
+        ctx.JSON(http.StatusBadRequest, models.Response{Error: err.Error()})
+        return
+    }
 
-	// 检查新邮箱是否已被使用
-	if _, err := c.userService.GetUserByEmail(update.Email); err == nil {
-		ctx.JSON(http.StatusBadRequest, models.Response{Error: "该邮箱已被使用"})
-		return
-	}
+    // 检查新邮箱是否已被使用
+    if _, err := uc.userService.GetUserByEmail(update.Email); err == nil {  // 将 c 改为 uc
+        ctx.JSON(http.StatusBadRequest, models.Response{Error: "该邮箱已被使用"})
+        return
+    }
 
-	// 更新邮箱
-	user, err := c.userService.GetUserByID(uint(id))
-	if err != nil {
-		ctx.JSON(http.StatusNotFound, models.Response{Error: "用户不存在"})
-		return
-	}
+    user, err := uc.userService.GetUserByID(uint(id))
+    if err != nil {
+        ctx.JSON(http.StatusNotFound, models.Response{Error: "用户不存在"})
+        return
+    }
 
-	user.Email = update.Email
-	if err := c.userService.UpdateUser(user); err != nil {
-		ctx.JSON(http.StatusInternalServerError, models.Response{Error: "更新邮箱失败"})
-		return
-	}
+    if err := uc.userService.UpdateUser(user); err != nil {  // 将 c 改为 uc
+        ctx.JSON(http.StatusInternalServerError, models.Response{Error: "更新邮箱失败"})
+        return
+    }
 
-	ctx.JSON(http.StatusOK, models.UserResponse{
-		Message: "邮箱更新成功",
-		User:    user,
-	})
+    ctx.JSON(http.StatusOK, models.UserResponse{
+        Message: "邮箱更新成功",
+        User:    user,
+    })
+}
+
+// ChangePassword godoc
+// @Summary 修改用户密码
+// @Description 用户修改自己的密码
+// @Tags 用户管理
+// @Accept json
+// @Produce json
+// @Param Authorization header string true "用户令牌"
+// @Param request body models.PasswordChangeRequest true "密码修改请求"
+// @Success 200 {object} models.Response
+// @Failure 400 {object} models.Response "请求参数错误"
+// @Failure 401 {object} models.Response "未授权"
+// @Router /api/users/password [post]
+func (uc *UserController) ChangePassword(ctx *gin.Context) {
+    var req models.PasswordChangeRequest
+    if err := ctx.ShouldBindJSON(&req); err != nil {
+        ctx.JSON(http.StatusBadRequest, models.Response{Error: "请提供正确的密码格式"})
+        return
+    }
+
+    userID, exists := ctx.Get("userID")
+    if !exists {
+        ctx.JSON(http.StatusUnauthorized, models.Response{Error: "未授权"})
+        return
+    }
+
+    // 修改类型断言
+    id, ok := userID.(uint)
+    if !ok {
+        ctx.JSON(http.StatusInternalServerError, models.Response{Error: "用户ID类型错误"})
+        return
+    }
+
+    err := uc.userService.ChangePassword(id, req.OldPassword, req.NewPassword)
+    if err != nil {
+        ctx.JSON(http.StatusBadRequest, models.Response{Error: err.Error()})
+        return
+    }
+
+    ctx.JSON(http.StatusOK, models.Response{Message: "密码修改成功"})
 }
