@@ -27,31 +27,24 @@ func NewUserController(userService *services.UserService) *UserController {
 // @Success 200 {object} models.TokenResponse
 // @Failure 401 {object} models.Response
 // @Router /login [post]
-func (c *UserController) Login(ctx *gin.Context) {
-	var req models.LoginRequest
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, models.Response{Error: err.Error()})
-		return
-	}
+func (uc *UserController) Login(c *gin.Context) {
+    var loginRequest struct {
+        Email    string `json:"email" binding:"required,email"`
+        Password string `json:"password" binding:"required"`
+    }
 
-	user, err := c.userService.GetUserByEmail(req.Email)
-	if err != nil {
-		ctx.JSON(http.StatusUnauthorized, models.Response{Error: "用户名或密码错误"})
-		return
-	}
+    if err := c.ShouldBindJSON(&loginRequest); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "请求参数错误"})
+        return
+    }
 
-	if err := c.userService.ComparePasswords(user.Password, req.Password); err != nil {
-		ctx.JSON(http.StatusUnauthorized, models.Response{Error: "用户名或密码错误"})
-		return
-	}
+    response, err := uc.userService.Login(loginRequest.Email, loginRequest.Password)
+    if err != nil {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+        return
+    }
 
-	token, err := c.userService.GenerateToken(user.ID)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, models.Response{Error: "生成token失败"})
-		return
-	}
-
-	ctx.JSON(http.StatusOK, models.TokenResponse{Token: token})
+    c.JSON(http.StatusOK, response)
 }
 
 // ListUsers godoc
@@ -162,35 +155,47 @@ func (c *UserController) DeleteUser(ctx *gin.Context) {
 // @Success 200 {object} models.UserResponse
 // @Failure 400 {object} models.Response
 // @Router /register [post]
-func (c *UserController) Register(ctx *gin.Context) {
-	var req models.RegisterRequest
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, models.Response{Error: err.Error()})
-		return
-	}
+func (uc *UserController) Register(c *gin.Context) {
+    var req models.RegisterRequest
+    if err := c.ShouldBindJSON(&req); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "请求参数错误"})
+        return
+    }
 
-	hashedPassword, err := c.userService.HashPassword(req.Password)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, models.Response{Error: "密码加密失败"})
-		return
-	}
+    // 检查邮箱是否已被注册
+    if _, err := uc.userService.GetUserByEmail(req.Email); err == nil {
+        c.JSON(http.StatusBadRequest, models.Response{
+            Error: "该邮箱已被注册",
+        })
+        return
+    }
 
-	user := &models.User{
-		Name:     req.Name,
-		Email:    req.Email,
-		Password: hashedPassword,
-		Age:      req.Age,
-	}
+    // 密码加密
+    hashedPassword, err := uc.userService.HashPassword(req.Password)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, models.Response{
+            Error: "密码加密失败",
+        })
+        return
+    }
 
-	if err := c.userService.CreateUser(user); err != nil {
-		ctx.JSON(http.StatusInternalServerError, models.Response{Error: "创建用户失败"})
-		return
-	}
+    user := &models.User{
+        Username: req.Username,
+        Email:    req.Email,
+        Password: hashedPassword,
+    }
 
-	ctx.JSON(http.StatusOK, models.UserResponse{
-		Message: "注册成功",
-		User:    user,
-	})
+    if err := uc.userService.CreateUser(user); err != nil {
+        c.JSON(http.StatusInternalServerError, models.Response{
+            Error: "创建用户失败",
+        })
+        return
+    }
+
+    c.JSON(http.StatusOK, models.Response{
+        Message: "注册成功",
+        Data:    user,
+    })
 }
 
 // UpdateEmail godoc

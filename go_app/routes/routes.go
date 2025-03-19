@@ -6,15 +6,18 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func SetupRoutes(r *gin.RouterGroup, userController *controllers.UserController) {
-	// 用户相关路由
-	r.POST("/register", userController.Register)
-	r.POST("/login", userController.Login)
-	
-	// 需要认证的路由
-	r.GET("/users", userController.ListUsers)
-	r.GET("/users/:id", userController.GetUser)
-	r.POST("/users/:id", userController.UpdateUser)
-	r.POST("/users/:id/delete", userController.DeleteUser)
-	r.POST("/users/:id/email", userController.UpdateEmail)
+func SetupRoutes(api *gin.RouterGroup, userController *controllers.UserController) {
+    // 无需认证的路由
+    api.POST("/register", userController.Register)
+    api.POST("/login", userController.Login)
+
+    // 需要认证的路由
+    users := api.Group("/users")
+    {
+        users.GET("", userController.ListUsers)            // 获取用户列表
+        users.GET("/:id", userController.GetUser)         // 获取单个用户
+        users.POST("/:id", userController.UpdateUser)     // 更新用户
+        users.POST("/:id/delete", userController.DeleteUser) // 删除用户
+        users.POST("/:id/email", userController.UpdateEmail) // 更新邮箱
+    }
 }

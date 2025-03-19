@@ -19,8 +19,9 @@
 package main
 
 import (
-	_ "go_app/docs"  // 导入 swagger 文档
 	"go_app/controllers"
+	_ "go_app/docs" // 导入 swagger 文档
+	"go_app/models"
 	"go_app/routes"
 	"go_app/services"
 	"log"
@@ -36,25 +37,36 @@ import (
 // @host localhost:8080
 // @BasePath /api
 func main() {
-	// 初始化数据库连接
 	db, err := services.ConnectDB()
 	if err != nil {
 		log.Fatal("Failed to connect to database:", err)
+	}
+
+	// 自动迁移数据库表结构
+	if err := db.AutoMigrate(&models.User{}); err != nil {
+		log.Fatal("Failed to migrate database:", err)
 	}
 
 	userService := services.NewUserService(db)
 	userController := controllers.NewUserController(userService)
 
 	r := gin.Default()
-	
+
+	// 添加 JSON 相关中间件
+	r.Use(gin.Logger())
+	r.Use(gin.Recovery())
+	r.Use(func(c *gin.Context) {
+		c.Header("Content-Type", "application/json")
+	})
+
 	// Swagger 配置
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
-	
+
 	// API 路由组
 	api := r.Group("/api")
 	{
-		routes.SetupRoutes(api, userController)  // 修改为正确的函数名
+		routes.SetupRoutes(api, userController) // 修改为正确的函数名
 	}
-	
+
 	r.Run(":8080")
 }

@@ -1,13 +1,18 @@
 package models
 
+import (
+    "time"
+)
+
 // User 用户模型
 // @Description 用户信息
 type User struct {
-    ID       uint   `json:"id" gorm:"primarykey" example:"1"`
-    Name     string `json:"name" example:"张三"`
-    Email    string `json:"email" gorm:"unique" example:"zhangsan@example.com"`
-    Password string `json:"-"` // 密码不返回给前端
-    Age      int    `json:"age" example:"25"`
+    ID        uint      `json:"id" gorm:"primarykey"`
+    Username  string    `json:"username" gorm:"column:username;not null"`
+    Email     string    `json:"email" gorm:"column:email;unique;not null"`
+    Password  string    `json:"-" gorm:"column:password;not null"`
+    CreatedAt time.Time `json:"createdAt" gorm:"column:created_at"`
+    UpdatedAt time.Time `json:"updatedAt" gorm:"column:updated_at"`
 }
 
 // LoginRequest 登录请求
@@ -20,13 +25,13 @@ type LoginRequest struct {
 // RegisterRequest 注册请求
 // @Description 用户注册请求参数
 type RegisterRequest struct {
-    Name     string `json:"name" binding:"required" example:"张三"`
+    Username string `json:"username" binding:"required" example:"张三"`  // 改为 Username
     Email    string `json:"email" binding:"required,email" example:"zhangsan@example.com"`
     Password string `json:"password" binding:"required" example:"123456"`
-    Age      int    `json:"age" binding:"required" example:"25"`
 }
 
 // EmailUpdate 邮箱更新请求
+// @Description 用户邮箱更新请求参数
 type EmailUpdate struct {
     Email string `json:"email" binding:"required,email" example:"new_email@example.com"`
 }

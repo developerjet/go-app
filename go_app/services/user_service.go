@@ -1,12 +1,11 @@
 package services
 
 import (
-    "time"
+    "errors"
     "go_app/models"
-    "go_app/middleware"
+    "go_app/utils"
     "golang.org/x/crypto/bcrypt"
     "gorm.io/gorm"
-    "github.com/golang-jwt/jwt/v4"
 )
 
 type UserService struct {
@@ -56,11 +55,25 @@ func (s *UserService) ComparePasswords(hashedPassword, password string) error {
     return bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
 }
 
-// 在 UserService 结构体中添加以下方法
-func (s *UserService) GenerateToken(userID uint) (string, error) {
-    token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-        "user_id": userID,
-        "exp":     time.Now().Add(time.Hour * 24).Unix(),
-    })
-    return token.SignedString([]byte(middleware.JWTSecret))
+func (s *UserService) Login(email, password string) (*models.LoginResponse, error) {
+    var user models.User
+    if err := s.db.Where("email = ?", email).First(&user).Error; err != nil {
+        return nil, errors.New("用户不存在")
+    }
+
+    // 验证密码
+    if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
+        return nil, errors.New("密码不正确")
+    }
+
+    // 生成 Token
+    token, err := utils.GenerateToken(user.ID)
+    if err != nil {
+        return nil, err
+    }
+
+    return &models.LoginResponse{
+        Token:    token,
+        UserInfo: &user,  // 修改这里，传递指针
+    }, nil
 }
