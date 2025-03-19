@@ -6,6 +6,7 @@
 
 - 用户注册
 - 邮箱登录
+- 密码修改
 - JWT 认证
 - 用户管理（CRUD）
 - Swagger API 文档
@@ -39,24 +40,28 @@ git clone https://github.com/developerjet/go-app.git
 cd go-app
 go mod download
 ```
+
 3. 配置数据库
 - 在 config/config.go 文件中配置数据库连接信息
+  
 4. 初始化数据库
 ```bash
 go run main.go init
 ```
-4. 安装依赖         
-go mod download
+
+5. 安装依赖         
 ```bash
+go mod download
 go mod tidy
 ```
 
-5. 运行项目
+### 运行项目 
+1. 运行项目
 ```bash
 go run main.go
 ```
 
-6. 运行项目须注意⚠️
+2. 运行项目须注意⚠️
 - 查找所有运行中的 Go 进程：
 ```bash
 ps aux | grep go
@@ -77,8 +82,9 @@ pkill -f "go_app"
 pkill -9 -f "go_app"
 ```
 
-5.重新启动项目
+3. 重新启动项目
 ```bash
+cd /Users/edy/Documents/Github/go-app/go_app
 go run main.go
 ```
 

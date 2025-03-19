@@ -287,20 +287,34 @@ func (uc *UserController) ChangePassword(ctx *gin.Context) {
         return
     }
 
+    // 从上下文中获取用户ID
     userID, exists := ctx.Get("userID")
     if !exists {
         ctx.JSON(http.StatusUnauthorized, models.Response{Error: "未授权"})
         return
     }
 
-    // 修改类型断言
+    // 修改类型转换方式
     id, ok := userID.(uint)
     if !ok {
         ctx.JSON(http.StatusInternalServerError, models.Response{Error: "用户ID类型错误"})
         return
     }
 
-    err := uc.userService.ChangePassword(id, req.OldPassword, req.NewPassword)
+    // 使用正确的类型获取用户信息
+    user, err := uc.userService.GetUserByID(id)
+    if err != nil {
+        ctx.JSON(http.StatusNotFound, models.Response{Error: "用户不存在"})
+        return
+    }
+
+    // 验证旧密码是否正确
+    if err := uc.userService.VerifyPassword(user.Password, req.OldPassword); err != nil {
+        ctx.JSON(http.StatusBadRequest, models.Response{Error: "旧密码错误"})
+        return
+    }
+    
+    err = uc.userService.ChangePassword(user.ID, req.OldPassword, req.NewPassword)
     if err != nil {
         ctx.JSON(http.StatusBadRequest, models.Response{Error: err.Error()})
         return
