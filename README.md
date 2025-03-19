@@ -31,7 +31,7 @@
 
 1. 克隆项目
 ```bash
-git clone https://github.com/yourusername/go-app.git
+git clone https://github.com/developerjet/go-app.git
 ```
 
 2. 安装依赖
