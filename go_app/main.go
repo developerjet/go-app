@@ -22,7 +22,7 @@ import (
     "fmt"
     "go_app/config"
     "go_app/controllers"
-    _ "go_app/docs"  // 确保这行存在且路径正确
+    _ "go_app/docs"
     "go_app/models"
     "go_app/routes"
     "go_app/services"
@@ -34,6 +34,7 @@ import (
 )
 
 func main() {
+    // 加载配置
     cfg, err := config.LoadConfig()
     if err != nil {
         log.Fatal("加载配置失败:", err)
@@ -44,19 +45,22 @@ func main() {
         gin.SetMode(gin.ReleaseMode)
     }
 
-    // 修改 InitDB 为 ConnectDB
-    db, err := services.ConnectDB()
-    if err != nil {
+    // 连接数据库
+    if err := services.ConnectDB(); err != nil {
         log.Fatal("连接数据库失败:", err)
     }
 
-	// 自动迁移数据库表结构
-	if err := db.AutoMigrate(&models.User{}); err != nil {
-		log.Fatal("Failed to migrate database:", err)
-	}
+    // 获取数据库实例
+    db := services.GetDB()
 
-	userService := services.NewUserService(db)
-	userController := controllers.NewUserController(userService)
+    // 自动迁移数据库表结构
+    if err := db.AutoMigrate(&models.User{}, &models.UserToken{}); err != nil {
+        log.Fatal("数据库迁移失败:", err)
+    }
+
+    // 初始化服务和控制器
+    userService := services.NewUserService(db)
+    userController := controllers.NewUserController(userService)
 
 	r := gin.Default()
 

@@ -10,15 +10,16 @@ import (
 func AuthMiddleware() gin.HandlerFunc {
     return func(c *gin.Context) {
         token := c.GetHeader("Authorization")
+        // 修改错误响应格式
         if token == "" {
-            c.JSON(http.StatusUnauthorized, models.Response{Error: "未提供认证token"})
+            c.JSON(http.StatusOK, models.NewError("请提供认证令牌"))
             c.Abort()
             return
         }
 
         claims, err := utils.ParseToken(token)
         if err != nil {
-            c.JSON(http.StatusUnauthorized, models.Response{Error: "无效的token"})
+            c.JSON(http.StatusOK, models.NewError("无效的认证令牌"))
             c.Abort()
             return
         }

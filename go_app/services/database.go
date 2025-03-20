@@ -7,10 +7,14 @@ import (
     "gorm.io/gorm"
 )
 
-func ConnectDB() (*gorm.DB, error) {
+// DB 全局数据库实例
+var DB *gorm.DB
+
+// ConnectDB 初始化数据库连接
+func ConnectDB() error {
     cfg, err := config.LoadConfig()
     if err != nil {
-        return nil, err
+        return err
     }
 
     dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
@@ -21,5 +25,16 @@ func ConnectDB() (*gorm.DB, error) {
         cfg.Database.DBName,
     )
     
-    return gorm.Open(mysql.Open(dsn), &gorm.Config{})
+    db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+    if err != nil {
+        return err
+    }
+
+    DB = db
+    return nil
+}
+
+// GetDB 获取数据库实例
+func GetDB() *gorm.DB {
+    return DB
 }

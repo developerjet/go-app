@@ -51,99 +51,6 @@ const docTemplate = `{
                 "responses": {}
             }
         },
-        "/api/users/logout": {
-            "post": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "用户退出登录",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "用户管理"
-                ],
-                "summary": "用户退出",
-                "responses": {
-                    "200": {
-                        "description": "退出成功",
-                        "schema": {
-                            "$ref": "#/definitions/models.Response"
-                        }
-                    },
-                    "401": {
-                        "description": "未授权",
-                        "schema": {
-                            "$ref": "#/definitions/models.Response"
-                        }
-                    },
-                    "500": {
-                        "description": "服务器错误",
-                        "schema": {
-                            "$ref": "#/definitions/models.Response"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/users/password": {
-            "post": {
-                "description": "用户修改自己的密码",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "用户管理"
-                ],
-                "summary": "修改用户密码",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "用户令牌",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
-                    },
-                    {
-                        "description": "密码修改请求",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.PasswordChangeRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/models.Response"
-                        }
-                    },
-                    "400": {
-                        "description": "请求参数错误",
-                        "schema": {
-                            "$ref": "#/definitions/models.Response"
-                        }
-                    },
-                    "401": {
-                        "description": "未授权",
-                        "schema": {
-                            "$ref": "#/definitions/models.Response"
-                        }
-                    }
-                }
-            }
-        },
         "/login": {
             "post": {
                 "description": "用户登录并获取token",
@@ -172,11 +79,42 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/models.TokenResponse"
+                            "$ref": "#/definitions/models.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/models.Response"
                         }
                     },
                     "401": {
-                        "description": "Unauthorized",
+                        "description": "登录失败",
+                        "schema": {
+                            "$ref": "#/definitions/models.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/logout": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "用户退出登录",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "用户管理"
+                ],
+                "summary": "用户退出",
+                "responses": {
+                    "200": {
+                        "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/models.Response"
                         }
@@ -186,7 +124,7 @@ const docTemplate = `{
         },
         "/register": {
             "post": {
-                "description": "创建新用户",
+                "description": "新用户注册",
                 "consumes": [
                     "application/json"
                 ],
@@ -212,11 +150,17 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/models.UserResponse"
+                            "$ref": "#/definitions/models.Response"
                         }
                     },
                     "400": {
-                        "description": "Bad Request",
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/models.Response"
+                        }
+                    },
+                    "409": {
+                        "description": "邮箱已被注册",
                         "schema": {
                             "$ref": "#/definitions/models.Response"
                         }
@@ -231,7 +175,10 @@ const docTemplate = `{
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "获取所有用户信息",
+                "description": "获取所有用户列表",
+                "consumes": [
+                    "application/json"
+                ],
                 "produces": [
                     "application/json"
                 ],
@@ -243,26 +190,50 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/models.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/definitions/models.User"
-                                            }
-                                        }
-                                    }
-                                }
-                            ]
+                            "$ref": "#/definitions/models.Response"
                         }
                     },
-                    "500": {
-                        "description": "Internal Server Error",
+                    "401": {
+                        "description": "未授权",
+                        "schema": {
+                            "$ref": "#/definitions/models.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/users/password": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "用户修改密码",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "用户管理"
+                ],
+                "summary": "修改密码",
+                "parameters": [
+                    {
+                        "description": "修改密码信息",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.PasswordChangeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/models.Response"
                         }
@@ -277,14 +248,17 @@ const docTemplate = `{
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "根据ID获取用户信息",
+                "description": "获取指定用户的详细信息",
+                "consumes": [
+                    "application/json"
+                ],
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "用户管理"
                 ],
-                "summary": "获取单个用户",
+                "summary": "获取用户信息",
                 "parameters": [
                     {
                         "type": "integer",
@@ -298,29 +272,17 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/models.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/models.User"
-                                        }
-                                    }
-                                }
-                            ]
+                            "$ref": "#/definitions/models.Response"
                         }
                     },
                     "400": {
-                        "description": "Bad Request",
+                        "description": "无效的用户ID",
                         "schema": {
                             "$ref": "#/definitions/models.Response"
                         }
                     },
                     "404": {
-                        "description": "Not Found",
+                        "description": "用户不存在",
                         "schema": {
                             "$ref": "#/definitions/models.Response"
                         }
@@ -366,30 +328,6 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/models.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/models.User"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/models.Response"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
                             "$ref": "#/definitions/models.Response"
                         }
                     }
@@ -403,7 +341,10 @@ const docTemplate = `{
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "根据ID删除用户",
+                "description": "删除指定用户",
+                "consumes": [
+                    "application/json"
+                ],
                 "produces": [
                     "application/json"
                 ],
@@ -426,24 +367,18 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/models.Response"
                         }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/models.Response"
-                        }
                     }
                 }
             }
         },
         "/users/{id}/email": {
-            "post": {
+            "put": {
                 "security": [
                     {
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "更新指定用户的邮箱地址",
+                "description": "更新用户邮箱",
                 "consumes": [
                     "application/json"
                 ],
@@ -453,7 +388,7 @@ const docTemplate = `{
                 "tags": [
                     "用户管理"
                 ],
-                "summary": "更新用户邮箱",
+                "summary": "更新邮箱",
                 "parameters": [
                     {
                         "type": "integer",
@@ -463,24 +398,18 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "description": "新邮箱",
-                        "name": "email",
+                        "description": "新邮箱信息",
+                        "name": "user",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.EmailUpdate"
+                            "$ref": "#/definitions/models.EmailUpdateRequest"
                         }
                     }
                 ],
                 "responses": {
                     "200": {
                         "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/models.UserResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/models.Response"
                         }
@@ -493,8 +422,7 @@ const docTemplate = `{
         "controllers.UserController": {
             "type": "object"
         },
-        "models.EmailUpdate": {
-            "description": "用户邮箱更新请求参数",
+        "models.EmailUpdateRequest": {
             "type": "object",
             "required": [
                 "email"
@@ -567,31 +495,27 @@ const docTemplate = `{
         "models.Response": {
             "type": "object",
             "properties": {
-                "data": {},
-                "error": {
-                    "type": "string",
-                    "example": "参数错误"
+                "code": {
+                    "description": "状态码 200成功，其他失败",
+                    "type": "integer"
+                },
+                "data": {
+                    "description": "数据"
                 },
                 "message": {
-                    "type": "string",
-                    "example": "操作成功"
-                }
-            }
-        },
-        "models.TokenResponse": {
-            "type": "object",
-            "properties": {
-                "token": {
-                    "type": "string",
-                    "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                    "description": "提示信息",
+                    "type": "string"
+                },
+                "timestamp": {
+                    "description": "时间戳",
+                    "type": "integer"
                 }
             }
         },
         "models.User": {
-            "description": "用户信息",
             "type": "object",
             "properties": {
-                "createdAt": {
+                "created_at": {
                     "type": "string"
                 },
                 "email": {
@@ -600,23 +524,15 @@ const docTemplate = `{
                 "id": {
                     "type": "integer"
                 },
-                "updatedAt": {
+                "token": {
+                    "description": "token 不保存到数据库",
+                    "type": "string"
+                },
+                "updated_at": {
                     "type": "string"
                 },
                 "username": {
                     "type": "string"
-                }
-            }
-        },
-        "models.UserResponse": {
-            "type": "object",
-            "properties": {
-                "message": {
-                    "type": "string",
-                    "example": "操作成功"
-                },
-                "user": {
-                    "type": "object"
                 }
             }
         }
