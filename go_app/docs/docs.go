@@ -317,8 +317,8 @@ const docTemplate = `{
                 }
             }
         },
-        "/users/info": {
-            "post": {
+        "/users/info/{id}": {
+            "get": {
                 "security": [
                     {
                         "ApiKeyAuth": []
@@ -326,8 +326,7 @@ const docTemplate = `{
                 ],
                 "description": "获取指定用户的详细信息",
                 "consumes": [
-                    "application/json",
-                    "application/x-www-form-urlencoded"
+                    "application/json"
                 ],
                 "produces": [
                     "application/json"
@@ -338,13 +337,11 @@ const docTemplate = `{
                 "summary": "获取用户信息",
                 "parameters": [
                     {
+                        "type": "integer",
                         "description": "用户ID",
-                        "name": "user",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.UserIDRequest"
-                        }
+                        "name": "id",
+                        "in": "path",
+                        "required": true
                     }
                 ],
                 "responses": {

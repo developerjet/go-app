@@ -4,6 +4,7 @@ import (
 	"go_app/models"
 	"go_app/services"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
@@ -241,22 +242,28 @@ func (uc *UserController) ListUsers(ctx *gin.Context) {
 // @Summary 获取用户信息
 // @Description 获取指定用户的详细信息
 // @Tags 用户管理
-// @Accept json,x-www-form-urlencoded
+// @Accept json
 // @Produce json
-// @Param user body models.UserIDRequest true "用户ID"
+// @Param id path int true "用户ID"
 // @Success 200 {object} models.Response
 // @Failure 400 {object} models.Response "请求参数错误"
 // @Failure 404 {object} models.Response "用户不存在"
 // @Security ApiKeyAuth
-// @Router /users/info [post]
+// @Router /users/info/{id} [get]
 func (uc *UserController) GetUser(ctx *gin.Context) {
-    var req models.UserIDRequest
-    if err := ctx.ShouldBind(&req); err != nil {
-        ctx.JSON(http.StatusOK, models.NewError("请求参数错误"))
+    userID := ctx.Param("id")
+    if userID == "" {
+        ctx.JSON(http.StatusOK, models.NewError("用户ID不能为空"))
         return
     }
 
-    user, err := uc.userService.GetUserByIDSafe(req.UserID)
+    id, err := strconv.ParseUint(userID, 10, 32)
+    if err != nil {
+        ctx.JSON(http.StatusOK, models.NewError("无效的用户ID"))
+        return
+    }
+
+    user, err := uc.userService.GetUserByIDSafe(uint(id))
     if err != nil {
         ctx.JSON(http.StatusOK, models.NewError("用户不存在"))
         return
