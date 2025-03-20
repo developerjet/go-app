@@ -1,16 +1,25 @@
 package services
 
 import (
+    "fmt"
+    "go_app/config"
     "gorm.io/driver/mysql"
     "gorm.io/gorm"
 )
 
 func ConnectDB() (*gorm.DB, error) {
-    dsn := "root:123456@tcp(127.0.0.1:3306)/go_app?charset=utf8mb4&parseTime=True&loc=Local"
-    db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+    cfg, err := config.LoadConfig()
     if err != nil {
         return nil, err
     }
 
-    return db, nil
+    dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
+        cfg.Database.User,
+        cfg.Database.Password,
+        cfg.Database.Host,
+        cfg.Database.Port,
+        cfg.Database.DBName,
+    )
+    
+    return gorm.Open(mysql.Open(dsn), &gorm.Config{})
 }

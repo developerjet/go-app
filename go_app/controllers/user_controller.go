@@ -236,10 +236,8 @@ func (uc *UserController) UpdateEmail(ctx *gin.Context) {
     }
 
     // 获取新邮箱
-    type EmailUpdate struct {
-        Email string `json:"email" binding:"required,email"`
-    }
-    var update models.EmailUpdate  // 使用 models 包中定义的类型
+    // 删除本地 EmailUpdate 结构体定义
+    var update models.EmailUpdate  // 直接使用 models 包中定义的类型
     if err := ctx.ShouldBindJSON(&update); err != nil {
         ctx.JSON(http.StatusBadRequest, models.Response{Error: err.Error()})
         return
@@ -321,4 +319,38 @@ func (uc *UserController) ChangePassword(ctx *gin.Context) {
     }
 
     ctx.JSON(http.StatusOK, models.Response{Message: "密码修改成功"})
+}
+
+// Logout godoc
+// @Summary 用户退出
+// @Description 用户退出登录
+// @Tags 用户管理
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Success 200 {object} models.Response "退出成功"
+// @Failure 401 {object} models.Response "未授权"
+// @Failure 500 {object} models.Response "服务器错误"
+// @Router /api/users/logout [post]  // 修改路由路径，添加 /api 前缀
+func (uc *UserController) Logout(ctx *gin.Context) {
+    // 从上下文获取用户ID
+    userID, exists := ctx.Get("userID")
+    if !exists {
+        ctx.JSON(http.StatusUnauthorized, models.Response{
+            Error: "未授权",
+        })
+        return
+    }
+
+    // 调用服务层的退出方法
+    if err := uc.userService.Logout(userID.(uint)); err != nil {
+        ctx.JSON(http.StatusInternalServerError, models.Response{
+            Error: "退出失败",
+        })
+        return
+    }
+
+    ctx.JSON(http.StatusOK, models.Response{
+        Message: "退出成功",
+    })
 }

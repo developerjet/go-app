@@ -108,3 +108,13 @@ func (s *UserService) ChangePassword(userID uint, oldPassword, newPassword strin
 
 	return nil
 }
+
+// Logout 用户退出
+func (s *UserService) Logout(userID uint) error {
+    // 这里可以添加一些退出时的清理工作
+    // 比如：清除用户的token记录、更新最后登出时间等
+    
+    // 如果使用 Redis 存储 token，可以在这里删除
+    // 目前简单返回成功，因为 JWT 是无状态的
+    return nil
+}

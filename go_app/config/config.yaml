@@ -1,0 +1,14 @@
+server:
+  port: 8080
+  mode: debug
+
+database:
+  host: localhost
+  port: 3306
+  user: root
+  password: root
+  dbname: go_app
+
+jwt:
+  secret: your-secret-key
+  expire: 24  # 小时

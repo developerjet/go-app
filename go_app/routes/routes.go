@@ -2,14 +2,19 @@ package routes
 
 import (
 	"go_app/controllers"
-	"go_app/middleware"  // 添加 middleware 包的导入
+	"go_app/middleware"
 
 	"github.com/gin-gonic/gin"
 )
 
-// SetupRoutes 配置所有的路由
-// @param api *gin.RouterGroup - gin路由组指针，用于注册路由
-// @param userController *controllers.UserController - 用户控制器指针，处理具体的业务逻辑
+// SetupRoutes 设置路由
+// @Summary 设置API路由
+// @Description 配置所有API路由和中间件
+// @Tags 系统
+// @Accept json
+// @Produce json
+// @Param userController body controllers.UserController true "用户控制器"
+// @Router /api [post]
 func SetupRoutes(api *gin.RouterGroup, userController *controllers.UserController) {
     // 无需认证的路由组
     // POST /register - 用户注册接口
@@ -22,7 +27,7 @@ func SetupRoutes(api *gin.RouterGroup, userController *controllers.UserControlle
 
     // 需要认证的路由组
     users := api.Group("/users")
-    users.Use(middleware.AuthMiddleware()) // 添加JWT认证中间件，验证请求头中的token
+    users.Use(middleware.AuthMiddleware())
     {
         // GET /users - 获取所有用户列表
         // 需要管理员权限
@@ -50,5 +55,10 @@ func SetupRoutes(api *gin.RouterGroup, userController *controllers.UserControlle
         // Body: 旧密码和新密码
         // 注意：此接口使用token中的用户ID，不需要在URL中指定用户ID
         users.POST("/password", userController.ChangePassword)
+        
+        // POST /users/logout - 用户退出登录
+        // 清除当前用户的JWT token
+        // 注意：此接口使用token中的用户ID，不需要在URL中指定用户ID
+        users.POST("/logout", userController.Logout)  // 这里的路由路径
     }
 }
