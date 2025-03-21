@@ -196,3 +196,31 @@ func (s *UserService) Logout(userID uint) error {
 
     return nil
 }
+
+// ListUsersWithPage 分页获取用户列表
+func (s *UserService) ListUsersWithPage(page, pageSize int) ([]*models.User, int64, error) {
+    var users []*models.User
+    var total int64
+    
+    // 计算偏移量
+    offset := (page - 1) * pageSize
+    
+    // 获取总记录数
+    if err := s.db.Model(&models.User{}).Count(&total).Error; err != nil {
+        return nil, 0, err
+    }
+    
+    // 获取分页数据
+    if err := s.db.Offset(offset).Limit(pageSize).Find(&users).Error; err != nil {
+        return nil, 0, err
+    }
+    
+    return users, total, nil
+}
+
+// 添加新方法
+func (s *UserService) IsEmailExists(email string) bool {
+    var count int64
+    s.db.Model(&models.User{}).Where("email = ?", email).Count(&count)
+    return count > 0
+}

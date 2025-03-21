@@ -112,3 +112,29 @@ func (u *User) ToUserInfo() *UserInfo {
 type LoginResponse struct {
     UserInfo *UserInfo `json:"userInfo"`
 }
+
+
+// Pagination 分页信息
+type Pagination struct {
+    Page      int   `json:"page"`      // 当前页码
+    PageSize  int   `json:"pageSize"`  // 每页数量
+    Total     int64 `json:"total"`     // 总记录数
+}
+
+// PageResponse 分页响应
+type PageResponse struct {
+    List       interface{} `json:"list"`       // 数据列表
+    Pagination Pagination  `json:"pagination"` // 分页信息
+}
+
+// UserPageResponse 用户分页列表响应
+type UserPageResponse struct {
+    List     []*UserInfo `json:"list"`      // 用户列表
+    Page     int         `json:"page"`      // 当前页码
+    PageSize int         `json:"pageSize"`  // 每页数量
+    Total    int64       `json:"total"`     // 总记录数
+}
+
+// 删除不需要的结构体
+// 删除 Pagination 结构体
+// 删除 PageResponse 结构体

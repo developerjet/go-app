@@ -24,6 +24,11 @@ definitions:
     - email
     - password
     type: object
+  models.LoginResponse:
+    properties:
+      userInfo:
+        $ref: '#/definitions/models.UserInfo'
+    type: object
   models.PasswordChangeRequest:
     properties:
       newPassword:
@@ -77,6 +82,41 @@ definitions:
     required:
     - userId
     type: object
+  models.UserInfo:
+    properties:
+      createdAt:
+        type: string
+      deletedAt:
+        description: 改为 string 类型
+        type: string
+      email:
+        type: string
+      token:
+        type: string
+      updatedAt:
+        type: string
+      userId:
+        type: integer
+      username:
+        type: string
+    type: object
+  models.UserPageResponse:
+    properties:
+      list:
+        description: 用户列表
+        items:
+          $ref: '#/definitions/models.UserInfo'
+        type: array
+      page:
+        description: 当前页码
+        type: integer
+      pageSize:
+        description: 每页数量
+        type: integer
+      total:
+        description: 总记录数
+        type: integer
+    type: object
 host: localhost:8080
 info:
   contact:
@@ -109,7 +149,7 @@ paths:
       summary: 设置API路由
       tags:
       - 系统
-  /login:
+  /api/login:
     post:
       consumes:
       - application/json
@@ -118,7 +158,7 @@ paths:
       parameters:
       - description: 用户登录信息
         in: body
-        name: user
+        name: request
         required: true
         schema:
           $ref: '#/definitions/models.LoginRequest'
@@ -128,7 +168,12 @@ paths:
         "200":
           description: 登录成功
           schema:
-            $ref: '#/definitions/models.Response'
+            allOf:
+            - $ref: '#/definitions/models.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.LoginResponse'
+              type: object
         "400":
           description: 请求参数错误
           schema:
@@ -148,28 +193,7 @@ paths:
       summary: 用户登录
       tags:
       - 用户管理
-  /logout:
-    post:
-      consumes:
-      - application/json
-      description: 用户退出登录
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/models.Response'
-        "401":
-          description: 未授权
-          schema:
-            $ref: '#/definitions/models.Response'
-      security:
-      - ApiKeyAuth: []
-      summary: 用户退出
-      tags:
-      - 用户管理
-  /register:
+  /api/register:
     post:
       consumes:
       - application/json
@@ -178,7 +202,7 @@ paths:
       parameters:
       - description: 用户注册信息
         in: body
-        name: user
+        name: request
         required: true
         schema:
           $ref: '#/definitions/models.RegisterRequest'
@@ -186,9 +210,14 @@ paths:
       - application/json
       responses:
         "200":
-          description: OK
+          description: 注册成功
           schema:
-            $ref: '#/definitions/models.Response'
+            allOf:
+            - $ref: '#/definitions/models.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.UserInfo'
+              type: object
         "400":
           description: 请求参数错误
           schema:
@@ -200,16 +229,134 @@ paths:
       summary: 用户注册
       tags:
       - 用户管理
-  /users:
+  /api/users:
     get:
       consumes:
       - application/json
-      description: 获取所有用户列表
+      description: 获取用户列表，支持分页查询
+      parameters:
+      - default: 1
+        description: 页码(从1开始)
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - default: 10
+        description: 每页数量
+        in: query
+        maximum: 100
+        minimum: 1
+        name: pageSize
+        type: integer
       produces:
       - application/json
       responses:
         "200":
-          description: OK
+          description: 获取成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.UserPageResponse'
+              type: object
+        "401":
+          description: 未授权
+          schema:
+            $ref: '#/definitions/models.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/models.Response'
+      security:
+      - ApiKeyAuth: []
+      summary: 获取用户列表
+      tags:
+      - 用户管理
+  /api/users/email:
+    post:
+      consumes:
+      - application/json
+      - application/x-www-form-urlencoded
+      description: 更新用户邮箱
+      parameters:
+      - description: 更新邮箱信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.EmailUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 更新成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.UserInfo'
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/models.Response'
+        "409":
+          description: 邮箱已被使用
+          schema:
+            $ref: '#/definitions/models.Response'
+      security:
+      - ApiKeyAuth: []
+      summary: 更新邮箱
+      tags:
+      - 用户管理
+  /api/users/info:
+    get:
+      consumes:
+      - application/json
+      description: 获取指定用户的详细信息
+      parameters:
+      - description: 用户ID
+        in: query
+        name: userId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 获取成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.UserInfo'
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/models.Response'
+        "404":
+          description: 用户不存在
+          schema:
+            $ref: '#/definitions/models.Response'
+      security:
+      - ApiKeyAuth: []
+      summary: 获取用户信息
+      tags:
+      - 用户管理
+  /api/users/logout:
+    post:
+      consumes:
+      - application/json
+      description: 用户退出登录
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 退出成功
           schema:
             $ref: '#/definitions/models.Response'
         "401":
@@ -218,7 +365,78 @@ paths:
             $ref: '#/definitions/models.Response'
       security:
       - ApiKeyAuth: []
-      summary: 获取用户列表
+      summary: 用户退出
+      tags:
+      - 用户管理
+  /api/users/password:
+    post:
+      consumes:
+      - application/json
+      - application/x-www-form-urlencoded
+      description: 用户修改密码
+      parameters:
+      - description: 修改密码信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.PasswordChangeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 密码修改成功
+          schema:
+            $ref: '#/definitions/models.Response'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/models.Response'
+        "401":
+          description: 未授权
+          schema:
+            $ref: '#/definitions/models.Response'
+      security:
+      - ApiKeyAuth: []
+      summary: 修改密码
+      tags:
+      - 用户管理
+  /api/users/update:
+    post:
+      consumes:
+      - application/json
+      - application/x-www-form-urlencoded
+      description: 更新用户基本信息
+      parameters:
+      - description: 用户信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.User'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 更新成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.UserInfo'
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/models.Response'
+        "404":
+          description: 用户不存在
+          schema:
+            $ref: '#/definitions/models.Response'
+      security:
+      - ApiKeyAuth: []
+      summary: 更新用户信息
       tags:
       - 用户管理
   /users/delete:
@@ -231,6 +449,12 @@ paths:
       - description: 用户ID
         in: body
         name: user
+        required: true
+        schema:
+          $ref: '#/definitions/models.UserIDRequest'
+      - description: 用户ID
+        in: body
+        name: request
         required: true
         schema:
           $ref: '#/definitions/models.UserIDRequest'
@@ -252,136 +476,6 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: 删除用户
-      tags:
-      - 用户管理
-  /users/email:
-    post:
-      consumes:
-      - application/json
-      - application/x-www-form-urlencoded
-      description: 更新用户邮箱
-      parameters:
-      - description: 更新邮箱信息
-        in: body
-        name: user
-        required: true
-        schema:
-          $ref: '#/definitions/models.EmailUpdateRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/models.Response'
-        "400":
-          description: 请求参数错误
-          schema:
-            $ref: '#/definitions/models.Response'
-        "409":
-          description: 邮箱已被使用
-          schema:
-            $ref: '#/definitions/models.Response'
-      security:
-      - ApiKeyAuth: []
-      summary: 更新邮箱
-      tags:
-      - 用户管理
-  /users/info/{id}:
-    get:
-      consumes:
-      - application/json
-      description: 获取指定用户的详细信息
-      parameters:
-      - description: 用户ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/models.Response'
-        "400":
-          description: 请求参数错误
-          schema:
-            $ref: '#/definitions/models.Response'
-        "404":
-          description: 用户不存在
-          schema:
-            $ref: '#/definitions/models.Response'
-      security:
-      - ApiKeyAuth: []
-      summary: 获取用户信息
-      tags:
-      - 用户管理
-  /users/password:
-    post:
-      consumes:
-      - application/json
-      - application/x-www-form-urlencoded
-      description: 用户修改密码
-      parameters:
-      - description: 修改密码信息
-        in: body
-        name: user
-        required: true
-        schema:
-          $ref: '#/definitions/models.PasswordChangeRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/models.Response'
-        "400":
-          description: 请求参数错误
-          schema:
-            $ref: '#/definitions/models.Response'
-        "401":
-          description: 未授权
-          schema:
-            $ref: '#/definitions/models.Response'
-      security:
-      - ApiKeyAuth: []
-      summary: 修改密码
-      tags:
-      - 用户管理
-  /users/update:
-    post:
-      consumes:
-      - application/json
-      - application/x-www-form-urlencoded
-      description: 更新用户基本信息
-      parameters:
-      - description: 用户信息
-        in: body
-        name: user
-        required: true
-        schema:
-          $ref: '#/definitions/models.User'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/models.Response'
-        "400":
-          description: 请求参数错误
-          schema:
-            $ref: '#/definitions/models.Response'
-        "404":
-          description: 用户不存在
-          schema:
-            $ref: '#/definitions/models.Response'
-      security:
-      - ApiKeyAuth: []
-      summary: 更新用户信息
       tags:
       - 用户管理
 securityDefinitions:
