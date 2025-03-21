@@ -77,8 +77,20 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
+                    "1000": {
+                        "description": "用户不存在",
+                        "schema": {
+                            "$ref": "#/definitions/models.Response"
+                        }
+                    },
+                    "1001": {
+                        "description": "密码错误",
+                        "schema": {
+                            "$ref": "#/definitions/models.Response"
+                        }
+                    },
                     "200": {
-                        "description": "OK",
+                        "description": "登录成功",
                         "schema": {
                             "$ref": "#/definitions/models.Response"
                         }
@@ -89,8 +101,8 @@ const docTemplate = `{
                             "$ref": "#/definitions/models.Response"
                         }
                     },
-                    "401": {
-                        "description": "登录失败",
+                    "500": {
+                        "description": "服务器内部错误",
                         "schema": {
                             "$ref": "#/definitions/models.Response"
                         }
@@ -569,28 +581,7 @@ const docTemplate = `{
             }
         },
         "models.User": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "type": "string"
-                },
-                "email": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "token": {
-                    "description": "token 不保存到数据库",
-                    "type": "string"
-                },
-                "updated_at": {
-                    "type": "string"
-                },
-                "username": {
-                    "type": "string"
-                }
-            }
+            "type": "object"
         },
         "models.UserIDRequest": {
             "type": "object",

@@ -155,9 +155,41 @@ dsn := "root:123456@tcp(127.0.0.1:3306)/go_app?charset=utf8mb4&parseTime=True&lo
 - 数据库：go_app
 - 字符集：utf8mb4
 
-## 数据库使用指南
+## MySQL 安装和管理
 
-### MySQL 服务管理
+### 安装 MySQL
+1. 使用 Homebrew 安装
+```bash
+brew install mysql@8.0
+```
+2. 启动 MySQL 服务
+```bash
+brew services start mysql@8.0
+```
+
+3. 设置 root 用户密码
+```bash
+mysql_secure_installation
+```
+
+### 卸载 MySQL
+1. 停止 MySQL 服务
+```bash
+brew services stop mysql@8.0
+```
+
+2. 卸载 MySQL
+```bash
+brew uninstall mysql@8.0
+```
+
+3. 清理 MySQL 数据和配置文件
+```bash
+rm -rf /usr/local/var/mysql
+rm -rf /usr/local/etc/my.cnf
+```
+
+## MySQL 服务管理
 1. 启动 MySQL 服务
 ```bash
 brew services start mysql@8.0
@@ -173,7 +205,7 @@ brew services stop mysql@8.0
 brew services list | grep mysql
 ```
 
-### 数据库操作
+## 数据库操作
 1. 连接数据库
 ```bash
 mysql -u root -p
@@ -224,6 +256,7 @@ lsof -i :8080
 
 # 终止占用端口的进程
 kill -9 <PID>
+
+# 终止项目进程
+pkill -f "go_app"
 ```
-
-

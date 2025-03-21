@@ -2,12 +2,12 @@ package controllers
 
 import (
 	"go_app/models"
+	"go_app/pkg/errcode"
 	"go_app/services"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gin-gonic/gin/binding"
 )
 
 type UserController struct {
@@ -25,38 +25,42 @@ func NewUserController(userService *services.UserService) *UserController {
 // @Accept json,x-www-form-urlencoded
 // @Produce json
 // @Param user body models.LoginRequest true "用户登录信息"
-// @Success 200 {object} models.Response
+// @Success 200 {object} models.Response{data} "登录成功"
 // @Failure 400 {object} models.Response "请求参数错误"
-// @Failure 401 {object} models.Response "登录失败"
+// @Failure 1000 {object} models.Response "用户不存在"
+// @Failure 1001 {object} models.Response "密码错误"
+// @Failure 500 {object} models.Response "服务器内部错误"
 // @Router /login [post]
 func (uc *UserController) Login(c *gin.Context) {
-    var req models.LoginRequest
-    contentType := c.GetHeader("Content-Type")
-    
-    var err error
-    if contentType == "application/x-www-form-urlencoded" {
-        err = c.ShouldBindWith(&req, binding.Form)
-    } else {
-        err = c.ShouldBindJSON(&req)
-    }
-    
-    if err != nil {
-        c.JSON(http.StatusOK, models.NewError("请求参数错误"))
-        return
-    }
+	var req models.LoginRequest
+	if err := c.ShouldBind(&req); err != nil {
+		c.JSON(http.StatusOK, models.NewError(errcode.InvalidParams))
+		return
+	}
 
-    user, token, err := uc.userService.Login(req.Email, req.Password)
-    if err != nil {
-        c.JSON(http.StatusOK, models.NewError(err.Error()))
-        return
-    }
+	user, token, err := uc.userService.Login(req.Email, req.Password)
+	if err != nil {
+		if err.Error() == "用户不存在" {
+			c.JSON(http.StatusOK, models.NewError(errcode.UserNotFound))
+			return
+		}
+		if err.Error() == "密码错误" {
+			c.JSON(http.StatusOK, models.NewError(errcode.UserPasswordError))
+			return
+		}
+		c.JSON(http.StatusOK, models.NewError(errcode.ServerError))
+		return
+	}
 
-    loginResp := &models.LoginResponse{
-        Token:    token,
-        UserInfo: user,
-    }
-    
-    c.JSON(http.StatusOK, models.NewSuccess(loginResp, "登录成功"))
+	// 将 token 只设置到 user 对象中
+	user.Token = token
+
+	// 在 Login 方法中
+	loginResp := &models.LoginResponse{
+	    UserInfo: user.ToUserInfo(),
+	}
+
+	c.JSON(http.StatusOK, models.NewSuccess(loginResp, "登录成功"))
 }
 
 // Register godoc
@@ -71,45 +75,34 @@ func (uc *UserController) Login(c *gin.Context) {
 // @Failure 409 {object} models.Response "邮箱已被注册"
 // @Router /register [post]
 func (uc *UserController) Register(c *gin.Context) {
-    var req models.RegisterRequest
-    contentType := c.GetHeader("Content-Type")
-    
-    var err error
-    if contentType == "application/x-www-form-urlencoded" {
-        err = c.ShouldBindWith(&req, binding.Form)
-    } else {
-        err = c.ShouldBindJSON(&req)
-    }
-    
-    if err != nil {
-        c.JSON(http.StatusOK, models.NewError("请求参数错误"))
-        return
-    }
+	var req models.RegisterRequest
+	if err := c.ShouldBind(&req); err != nil {
+		c.JSON(http.StatusOK, models.NewError(errcode.InvalidParams))
+		return
+	}
 
-    // 检查邮箱是否已被注册
-    if _, err := uc.userService.GetUserByEmail(req.Email); err == nil {
-        c.JSON(http.StatusOK, models.NewError("该邮箱已被注册"))
-        return
-    }
+	if _, err := uc.userService.GetUserByEmail(req.Email); err == nil {
+		c.JSON(http.StatusOK, models.NewError(errcode.UserAlreadyExists))
+		return
+	}
 
-    // 密码加密
-    hashedPassword, err := uc.userService.HashPassword(req.Password)
-    if err != nil {
-        c.JSON(http.StatusOK, models.NewError("密码加密失败"))
-        return
-    }
+	hashedPassword, err := uc.userService.HashPassword(req.Password)
+	if err != nil {
+		c.JSON(http.StatusOK, models.NewError(errcode.ServerError))
+		return
+	}
 
-    user := &models.User{
-        Username: req.Username,
-        Email:    req.Email,
-        Password: hashedPassword,
-    }
+	user := &models.User{
+		Username: req.Username,
+		Email:    req.Email,
+		Password: hashedPassword,
+	}
 
-    if err := uc.userService.CreateUser(user); err != nil {
-        c.JSON(http.StatusOK, models.NewError("创建用户失败"))
-        return
-    }
-    c.JSON(http.StatusOK, models.NewSuccess(user, "注册成功"))
+	if err := uc.userService.CreateUser(user); err != nil {
+		c.JSON(http.StatusOK, models.NewError(errcode.UserCreateFailed))
+		return
+	}
+	c.JSON(http.StatusOK, models.NewSuccess(user.ToUserInfo(), "注册成功"))
 }
 
 // UpdateUser godoc
@@ -125,17 +118,17 @@ func (uc *UserController) Register(c *gin.Context) {
 // @Security ApiKeyAuth
 // @Router /users/update [post]
 func (uc *UserController) UpdateUser(ctx *gin.Context) {
-    var user models.User
-    if err := ctx.ShouldBind(&user); err != nil {
-        ctx.JSON(http.StatusOK, models.NewError("请求参数错误"))
-        return
-    }
+	var user models.User
+	if err := ctx.ShouldBind(&user); err != nil {
+		ctx.JSON(http.StatusOK, models.NewError(errcode.InvalidParams))
+		return
+	}
 
-    if err := uc.userService.UpdateUserSafe(&user); err != nil {
-        ctx.JSON(http.StatusOK, models.NewError("更新失败"))
-        return
-    }
-    ctx.JSON(http.StatusOK, models.NewSuccess(user, "更新成功"))
+	if err := uc.userService.UpdateUserSafe(&user); err != nil {
+		ctx.JSON(http.StatusOK, models.NewError(errcode.UserUpdateFailed))
+		return
+	}
+	ctx.JSON(http.StatusOK, models.NewSuccess(user.ToUserInfo(), "更新成功"))
 }
 
 // UpdateEmail godoc
@@ -151,31 +144,30 @@ func (uc *UserController) UpdateUser(ctx *gin.Context) {
 // @Security ApiKeyAuth
 // @Router /users/email [post]
 func (uc *UserController) UpdateEmail(ctx *gin.Context) {
-    var req models.EmailUpdateRequest
-    if err := ctx.ShouldBind(&req); err != nil {
-        ctx.JSON(http.StatusOK, models.NewError("请求参数错误"))
-        return
-    }
+	var req models.EmailUpdateRequest
+	if err := ctx.ShouldBind(&req); err != nil {
+		ctx.JSON(http.StatusOK, models.NewError(errcode.InvalidParams))
+		return
+	}
 
-    // 检查新邮箱是否已被使用
-    if _, err := uc.userService.GetUserByEmail(req.Email); err == nil {
-        ctx.JSON(http.StatusOK, models.NewError("该邮箱已被使用"))
-        return
-    }
+	if _, err := uc.userService.GetUserByEmail(req.Email); err == nil {
+		ctx.JSON(http.StatusOK, models.NewError(errcode.UserAlreadyExists))
+		return
+	}
 
-    user, err := uc.userService.GetUserByID(req.UserID)
-    if err != nil {
-        ctx.JSON(http.StatusOK, models.NewError("用户不存在"))
-        return
-    }
+	user, err := uc.userService.GetUserByID(req.UserID)
+	if err != nil {
+		ctx.JSON(http.StatusOK, models.NewError(errcode.UserNotFound))
+		return
+	}
 
-    user.Email = req.Email
-    if err := uc.userService.UpdateUserSafe(user); err != nil {
-        ctx.JSON(http.StatusOK, models.NewError("更新邮箱失败"))
-        return
-    }
+	user.Email = req.Email
+	if err := uc.userService.UpdateUserSafe(user); err != nil {
+		ctx.JSON(http.StatusOK, models.NewError(errcode.UserUpdateFailed))
+		return
+	}
 
-    ctx.JSON(http.StatusOK, models.NewSuccess(user, "邮箱更新成功"))
+	ctx.JSON(http.StatusOK, models.NewSuccess(user.ToUserInfo(), "邮箱更新成功"))
 }
 
 // ChangePassword godoc
@@ -191,32 +183,24 @@ func (uc *UserController) UpdateEmail(ctx *gin.Context) {
 // @Security ApiKeyAuth
 // @Router /users/password [post]
 func (uc *UserController) ChangePassword(ctx *gin.Context) {
-    var req models.PasswordChangeRequest
-    contentType := ctx.GetHeader("Content-Type")
-    
-    var err error
-    if contentType == "application/x-www-form-urlencoded" {
-        err = ctx.ShouldBindWith(&req, binding.Form)
-    } else {
-        err = ctx.ShouldBindJSON(&req)
-    }
-    
-    if err != nil {
-        ctx.JSON(http.StatusOK, models.NewError("请求参数错误"))
-        return
-    }
+	var req models.PasswordChangeRequest
+	if err := ctx.ShouldBind(&req); err != nil {
+		ctx.JSON(http.StatusOK, models.NewError(errcode.InvalidParams))
+		return
+	}
 
-    userID, exists := ctx.Get("userID")
-    if !exists {
-        ctx.JSON(http.StatusOK, models.NewError("未授权"))
-        return
-    }
+	userID, exists := ctx.Get("userID")
+	if !exists {
+		ctx.JSON(http.StatusOK, models.NewError(errcode.Unauthorized))
+		return
+	}
 
-    if err := uc.userService.ChangePassword(userID.(uint), req.OldPassword, req.NewPassword); err != nil {
-        ctx.JSON(http.StatusOK, models.NewError(err.Error()))
-        return
-    }
-    ctx.JSON(http.StatusOK, models.NewSuccess(nil, "密码修改成功"))
+	if err := uc.userService.ChangePassword(userID.(uint), req.OldPassword, req.NewPassword); err != nil {
+		// 这里错误地使用了 c 而不是 ctx
+		ctx.JSON(http.StatusOK, models.NewError(errcode.UserPasswordError))
+		return
+	}
+	ctx.JSON(http.StatusOK, models.NewSuccess(nil, "密码修改成功"))
 }
 
 // ListUsers godoc
@@ -232,10 +216,17 @@ func (uc *UserController) ChangePassword(ctx *gin.Context) {
 func (uc *UserController) ListUsers(ctx *gin.Context) {
     users, err := uc.userService.ListUsers()
     if err != nil {
-        ctx.JSON(http.StatusOK, models.NewError("获取用户列表失败"))
+        ctx.JSON(http.StatusOK, models.NewError(errcode.ServerError))
         return
     }
-    ctx.JSON(http.StatusOK, models.NewSuccess(users, "获取成功"))
+    
+    // 转换用户列表
+    userInfos := make([]*models.UserInfo, len(users))
+    for i, user := range users {
+        userInfos[i] = user.ToUserInfo()
+    }
+    
+    ctx.JSON(http.StatusOK, models.NewSuccess(userInfos, "获取成功"))
 }
 
 // GetUser godoc
@@ -251,24 +242,25 @@ func (uc *UserController) ListUsers(ctx *gin.Context) {
 // @Security ApiKeyAuth
 // @Router /users/info/{id} [get]
 func (uc *UserController) GetUser(ctx *gin.Context) {
-    userID := ctx.Param("id")
-    if userID == "" {
-        ctx.JSON(http.StatusOK, models.NewError("用户ID不能为空"))
-        return
-    }
+	userID := ctx.Param("id")
+	if userID == "" {
+		ctx.JSON(http.StatusOK, models.NewError(errcode.InvalidParams))
+		return
+	}
 
-    id, err := strconv.ParseUint(userID, 10, 32)
-    if err != nil {
-        ctx.JSON(http.StatusOK, models.NewError("无效的用户ID"))
-        return
-    }
+	id, err := strconv.ParseUint(userID, 10, 32)
+	if err != nil {
+		ctx.JSON(http.StatusOK, models.NewError(errcode.InvalidParams))
+		return
+	}
 
-    user, err := uc.userService.GetUserByIDSafe(uint(id))
-    if err != nil {
-        ctx.JSON(http.StatusOK, models.NewError("用户不存在"))
-        return
-    }
-    ctx.JSON(http.StatusOK, models.NewSuccess(user, "获取成功"))
+	user, err := uc.userService.GetUserByIDSafe(uint(id))
+	if err != nil {
+		ctx.JSON(http.StatusOK, models.NewError(errcode.UserNotFound))
+		return
+	}
+	// GetUser 方法中
+	ctx.JSON(http.StatusOK, models.NewSuccess(user.ToUserInfo(), "获取成功"))
 }
 
 // DeleteUser godoc
@@ -284,17 +276,17 @@ func (uc *UserController) GetUser(ctx *gin.Context) {
 // @Security ApiKeyAuth
 // @Router /users/delete [post]
 func (uc *UserController) DeleteUser(ctx *gin.Context) {
-    var req models.UserIDRequest
-    if err := ctx.ShouldBind(&req); err != nil {
-        ctx.JSON(http.StatusOK, models.NewError("请求参数错误"))
-        return
-    }
+	var req models.UserIDRequest
+	if err := ctx.ShouldBind(&req); err != nil {
+		ctx.JSON(http.StatusOK, models.NewError(errcode.InvalidParams))
+		return
+	}
 
-    if err := uc.userService.DeleteUser(req.UserID); err != nil {
-        ctx.JSON(http.StatusOK, models.NewError("删除用户失败"))
-        return
-    }
-    ctx.JSON(http.StatusOK, models.NewSuccess(nil, "删除成功"))
+	if err := uc.userService.DeleteUser(req.UserID); err != nil {
+		ctx.JSON(http.StatusOK, models.NewError(errcode.UserDeleteFailed))
+		return
+	}
+	ctx.JSON(http.StatusOK, models.NewSuccess(nil, "删除成功"))
 }
 
 // Logout godoc
@@ -308,15 +300,15 @@ func (uc *UserController) DeleteUser(ctx *gin.Context) {
 // @Security ApiKeyAuth
 // @Router /logout [post]
 func (uc *UserController) Logout(ctx *gin.Context) {
-    userID, exists := ctx.Get("userID")
-    if !exists {
-        ctx.JSON(http.StatusOK, models.NewError("未授权"))
-        return
-    }
+	userID, exists := ctx.Get("userID")
+	if !exists {
+		ctx.JSON(http.StatusOK, models.NewError(errcode.Unauthorized))
+		return
+	}
 
-    if err := uc.userService.Logout(userID.(uint)); err != nil {
-        ctx.JSON(http.StatusOK, models.NewError("退出失败"))
-        return
-    }
-    ctx.JSON(http.StatusOK, models.NewSuccess(nil, "退出成功"))
+	if err := uc.userService.Logout(userID.(uint)); err != nil {
+		ctx.JSON(http.StatusOK, models.NewError(errcode.ServerError))
+		return
+	}
+	ctx.JSON(http.StatusOK, models.NewSuccess(nil, "退出成功"))
 }

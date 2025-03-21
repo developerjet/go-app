@@ -1,30 +1,50 @@
 package middleware
 
 import (
-    "go_app/models"
-    "go_app/utils"
-    "net/http"
-    "github.com/gin-gonic/gin"
+	"go_app/models"
+	"go_app/services"
+    "go_app/pkg/errcode"
+	"go_app/utils"
+	"net/http"
+
+	"github.com/gin-gonic/gin"
 )
 
 func AuthMiddleware() gin.HandlerFunc {
-    return func(c *gin.Context) {
-        token := c.GetHeader("Authorization")
-        // 修改错误响应格式
-        if token == "" {
-            c.JSON(http.StatusOK, models.NewError("请提供认证令牌"))
-            c.Abort()
-            return
-        }
+	return func(c *gin.Context) {
+		tokenString := c.GetHeader("Authorization")
+		if tokenString == "" {
+			c.JSON(http.StatusOK, models.NewError(errcode.TokenMissing))
+			c.Abort()
+			return
+		}
 
-        claims, err := utils.ParseToken(token)
-        if err != nil {
-            c.JSON(http.StatusOK, models.NewError("无效的认证令牌"))
-            c.Abort()
-            return
-        }
+		claims, err := utils.ParseToken(tokenString)
+		if err != nil {
+			c.JSON(http.StatusOK, models.NewError(errcode.TokenInvalid))
+			c.Abort()
+			return
+		}
 
-        c.Set("userID", claims.UserID)
-        c.Next()
-    }
+		userID := claims.UserID
+		tokenVersion := claims.TokenVersion
+
+		// 验证 token 版本
+		db := services.GetDB()
+		var user models.User
+		if err := db.First(&user, userID).Error; err != nil {
+			c.JSON(http.StatusOK, models.NewError(errcode.UserNotFound))
+			c.Abort()
+			return
+		}
+
+		if tokenVersion != user.TokenVersion {
+			c.JSON(http.StatusOK, models.NewError(errcode.TokenVersionError))
+			c.Abort()
+			return
+		}
+
+		c.Set("userID", userID)
+		c.Next()
+	}
 }

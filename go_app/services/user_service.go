@@ -1,14 +1,13 @@
 package services
 
 import (
-	"errors"
-	"fmt"
-	"time"
-	"go_app/models"
-	"go_app/utils"
+    "errors"
+    "fmt"
+    "go_app/models"
+    "go_app/utils"
 
-	"golang.org/x/crypto/bcrypt"
-	"gorm.io/gorm"
+    "golang.org/x/crypto/bcrypt"
+    "gorm.io/gorm"
 )
 
 type UserService struct {
@@ -62,39 +61,46 @@ func (s *UserService) HashPassword(password string) (string, error) {
 }
 
 // Login 登录
+// GenerateToken 生成新的 token
+func (s *UserService) GenerateToken(user *models.User) (string, error) {
+    // 增加 token 版本号
+    user.TokenVersion++
+    if err := s.db.Save(user).Error; err != nil {
+        return "", err
+    }
+
+    // 生成包含版本号的 token
+    token, err := utils.GenerateToken(user.ID, user.TokenVersion)
+    if err != nil {
+        return "", err
+    }
+
+    return token, nil
+}
+
+// Login 用户登录
 func (s *UserService) Login(email, password string) (*models.User, string, error) {
     var user models.User
     if err := s.db.Where("email = ?", email).First(&user).Error; err != nil {
-        return nil, "", fmt.Errorf("用户不存在")
+        return nil, "", errors.New("用户不存在")
     }
 
+    // 验证密码
     if err := s.VerifyPassword(user.Password, password); err != nil {
-        return nil, "", fmt.Errorf("密码错误")
+        return nil, "", errors.New("密码错误")
     }
 
-    // 生成新token
-    token, err := utils.GenerateToken(user.ID)
+    // 生成新的 token
+    token, err := s.GenerateToken(&user)
     if err != nil {
-        return nil, "", err
+        return nil, "", fmt.Errorf("生成token失败: %v", err)
     }
 
-    // 删除该用户的旧token
-    if err := s.db.Where("user_id = ?", user.ID).Delete(&models.UserToken{}).Error; err != nil {
-        return nil, "", err
-    }
-
-    // 创建新token记录
-    userToken := &models.UserToken{
-        UserID:    user.ID,
-        Token:     token,
-        ExpiredAt: time.Now().Add(24 * time.Hour),
-    }
-
-    if err := s.db.Create(userToken).Error; err != nil {
-        return nil, "", err
-    }
-
+    // 将 token 设置到用户对象中
     user.Token = token
+    // 清除敏感信息
+    user.Password = ""
+
     return &user, token, nil
 }
 
@@ -177,10 +183,16 @@ func (s *UserService) ChangePassword(userID uint, oldPassword, newPassword strin
 
 // Logout 用户退出
 func (s *UserService) Logout(userID uint) error {
-    // 这里可以添加一些退出时的清理工作
-    // 比如：清除用户的token记录、更新最后登出时间等
-    
-    // 如果使用 Redis 存储 token，可以在这里删除
-    // 目前简单返回成功，因为 JWT 是无状态的
+    var user models.User
+    if err := s.db.First(&user, userID).Error; err != nil {
+        return errors.New("用户不存在")
+    }
+
+    // 增加 token 版本号使当前 token 失效
+    user.TokenVersion++
+    if err := s.db.Save(&user).Error; err != nil {
+        return errors.New("登出失败")
+    }
+
     return nil
 }

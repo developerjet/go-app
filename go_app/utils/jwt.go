@@ -1,44 +1,48 @@
 package utils
 
 import (
-    "errors"
     "time"
-    "github.com/golang-jwt/jwt/v4"  // 更新为 v4 版本
+    "go_app/pkg/errcode"
+    "github.com/golang-jwt/jwt"
 )
 
-// Claims 自定义的 JWT Claims
 type Claims struct {
-    UserID uint `json:"userId"`  // 添加 json 标签
+    UserID       uint `json:"user_id"`
+    TokenVersion int  `json:"token_version"`
     jwt.StandardClaims
 }
 
-var jwtSecret = []byte("your_jwt_secret_key")
-
-func GenerateToken(userID uint) (string, error) {
-    claims := &Claims{
-        UserID: userID,
+func GenerateToken(userID uint, tokenVersion int) (string, error) {
+    claims := Claims{
+        UserID:       userID,
+        TokenVersion: tokenVersion,
         StandardClaims: jwt.StandardClaims{
-            ExpiresAt: time.Now().Add(time.Hour * 24).Unix(),
+            ExpiresAt: time.Now().Add(24 * time.Hour).Unix(),
             IssuedAt:  time.Now().Unix(),
         },
     }
-    
+
     token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-    return token.SignedString(jwtSecret) // 使用 jwtSecret 替换 secretKey
+    return token.SignedString([]byte("your-secret-key")) // 请使用配置文件中的密钥
 }
 
 func ParseToken(tokenString string) (*Claims, error) {
     token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
-        return jwtSecret, nil // 使用 jwtSecret 替换 secretKey
+        return []byte("your-secret-key"), nil
     })
-    
+
     if err != nil {
-        return nil, err
+        ve, ok := err.(*jwt.ValidationError)
+        if ok && ve.Errors&jwt.ValidationErrorExpired != 0 {
+            return nil, errcode.TokenExpired
+        }
+        return nil, errcode.TokenInvalid
     }
-    
-    if claims, ok := token.Claims.(*Claims); ok && token.Valid {
-        return claims, nil
+
+    claims, ok := token.Claims.(*Claims)
+    if !ok || !token.Valid {
+        return nil, errcode.TokenInvalid
     }
-    
-    return nil, errors.New("invalid token")
+
+    return claims, nil
 }
