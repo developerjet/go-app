@@ -20,13 +20,16 @@ package main
 
 import (
     "fmt"
+    "log"
+    
     "go_app/config"
     "go_app/controllers"
     _ "go_app/docs"
+    "go_app/middleware"
     "go_app/models"
+    "go_app/pkg/websocket"
     "go_app/routes"
     "go_app/services"
-    "log"
 
     "github.com/gin-gonic/gin"
     swaggerFiles "github.com/swaggo/files"
@@ -54,33 +57,53 @@ func main() {
     db := services.GetDB()
 
     // 自动迁移数据库表结构
-    if err := db.AutoMigrate(&models.User{}, &models.UserToken{}); err != nil {
+    // 在 main.go 的 AutoMigrate 部分添加新的模型
+    if err := db.AutoMigrate(&models.User{}, &models.UserToken{}, &models.Activity{}, &models.Notification{}); err != nil {
         log.Fatal("数据库迁移失败:", err)
     }
+
+    // 初始化 Gin 引擎
+    r := gin.Default()
+
+    // 添加中间件
+    r.Use(gin.Logger())
+    r.Use(gin.Recovery())
+    r.Use(func(c *gin.Context) {
+        // 根据请求的 Content-Type 设置响应格式
+        contentType := c.ContentType()
+        switch contentType {
+        case "application/x-www-form-urlencoded":
+            c.Header("Content-Type", "application/x-www-form-urlencoded")
+        case "multipart/form-data":
+            c.Header("Content-Type", "multipart/form-data")
+        default:
+            c.Header("Content-Type", "application/json")
+        }
+    })
+
+    // Swagger 配置
+    r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
     // 初始化服务和控制器
     userService := services.NewUserService(db)
     userController := controllers.NewUserController(userService)
 
-	r := gin.Default()
+    // 初始化 WebSocket 管理器
+    wsManager := websocket.NewManager()
+    websocket.GlobalManager = wsManager  // 设置全局管理器
+    go wsManager.Start()
 
-	// 添加 JSON 相关中间件
-	r.Use(gin.Logger())
-	r.Use(gin.Recovery())
-	r.Use(func(c *gin.Context) {
-		c.Header("Content-Type", "application/json")
-	})
+    // 初始化 WebSocket 控制器
+    wsController := controllers.NewWebSocketController(wsManager)
 
-	// Swagger 配置
-	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+    // API 路由组
+    api := r.Group("/api")
+    {
+        routes.SetupRoutes(api, userController)
+        api.GET("/ws", middleware.JWT(), wsController.HandleConnection)
+    }
 
-	// API 路由组
-	api := r.Group("/api")
-	{
-		routes.SetupRoutes(api, userController) // 修改为正确的函数名
-	}
-
-    // 使用配置的端口启动服务器
+    // 启动服务器
     serverAddr := fmt.Sprintf(":%d", cfg.Server.Port)
     log.Printf("服务器启动在 http://localhost%s", serverAddr)
     if err := r.Run(serverAddr); err != nil {

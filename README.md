@@ -2,6 +2,10 @@
 
 一个基于 Gin 框架的用户管理系统，提供完整的用户认证和管理功能。
 
+### 📚 参考资料
+Go语言中文学习文档
+>https://www.topgoer.com/
+
 ## 📋 功能特性
 
 ### 🔐 用户认证
@@ -32,6 +36,33 @@
 - 完整的错误处理
 - 数据库事务支持
 
+### 📡 WebSocket 实时通信
+- 实时消息推送
+- 活动通知订阅
+- 系统消息广播
+- 用户在线状态管理
+  
+### 连接地址
+```
+ws://localhost:8080/api/ws?token=你的JWT令牌
+```
+
+### 订阅WS业务
+1. 订阅活动主题
+```json
+{
+    "action": "subscribe",
+    "topic": "activity"
+}
+```
+2. 取消订阅活动主题
+```json
+{
+    "action": "unsubscribe",
+    "topic": "activity"
+}
+```
+
 ## 💻 技术栈
 - Go 1.21
 - Gin Web Framework
@@ -39,6 +70,7 @@
 - MySQL 8.0
 - JWT
 - Swagger
+- Gorilla WebSocket
 
 ## 📁 目录结构
 - `config`: 配置文件
@@ -221,30 +253,6 @@ USE go_app;
 4. 查看表列表
 ```sql
 SHOW TABLES;
-```
-5. 查看表结构
-```sql
-DESCRIBE users;
-```
-6. 查询数据
-```sql
-SELECT * FROM users;
-```
-7. 插入数据
-```sql
-INSERT INTO users (name, email, password) VALUES ('John Doe', 'EMAIL', 'password123');
-```
-8. 插入数据
-```sql
-INSERT INTO users (name, email, password) VALUES ('John Doe', 'EMAIL', 'password123');
-```
-9. 更新数据
-```sql
-UPDATE users SET name = 'Jane Doe' WHERE id = 1;
-```
-10. 删除数据
-```sql
-DELETE FROM users WHERE id = 1;
 ```
 
 ## 常见问题
