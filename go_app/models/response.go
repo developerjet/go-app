@@ -24,53 +24,26 @@ func NewSuccess(data interface{}, message string) Response {
 }
 
 // NewError 使用 ErrorCode 创建错误响应
-func NewError(err *errcode.ErrorCode) Response {
-	return Response{
-		Code:      err.Code,
-		Message:   err.Message,
-		Timestamp: time.Now().Unix(),
-	}
-}
-
-// UserResponse 用户相关响应
-type UserResponse struct {
-	Message string    `json:"message" example:"操作成功"`
-	User    *UserInfo `json:"user" swaggertype:"object"`
-}
-
-// Token 状态码
-const (
-	TokenStatusValid   = 1    // token有效
-	TokenStatusInvalid = 4001 // token无效
-	TokenStatusExpired = 4002 // token过期
-	TokenStatusReplace = 4003 // token被替换（在其他设备登录）
-)
-
-// Token 错误提示信息
-var TokenErrorMessages = map[int]string{
-	TokenStatusInvalid: "无效的访问凭证",
-	TokenStatusExpired: "访问凭证已过期",
-	TokenStatusReplace: "您的账号已在其他设备登录",
-}
-
-// TokenStatusResponse Token状态响应
-type TokenStatusResponse struct {
-	Status  int    `json:"status"`  // token状态码
-	Message string `json:"message"` // 状态描述
+func NewError(err *errcode.ErrorCode) *Response {  // 修改返回类型为指针
+    return &Response{
+        Code:      err.Code,
+        Message:   err.Message,
+        Timestamp: time.Now().Unix(),
+    }
 }
 
 // NewTokenError 创建Token错误响应
-func NewTokenError(status int) Response {
-	message := TokenErrorMessages[status]
-	return Response{
-		Code:    status,
-		Message: message,
-		Data: TokenStatusResponse{
-			Status:  status,
-			Message: message,
-		},
-		Timestamp: time.Now().Unix(),
-	}
+func NewTokenError(status int) *Response {  // 修改返回类型为指针
+    message := TokenErrorMessages[status]
+    return &Response{
+        Code:    status,
+        Message: message,
+        Data: TokenStatusResponse{
+            Status:  status,
+            Message: message,
+        },
+        Timestamp: time.Now().Unix(),
+    }
 }
 
 // TokenResponse 登录成功返回的 token 响应
@@ -86,6 +59,7 @@ type UserInfo struct {
     DeletedAt string    `json:"deletedAt,omitempty"` // 改为 string 类型
     Username  string    `json:"username"`
     Email     string    `json:"email"`
+    AvatarURL string    `json:"avatarUrl"`
     Token     string    `json:"token,omitempty"`
 }
 
@@ -97,6 +71,7 @@ func (u *User) ToUserInfo() *UserInfo {
         UpdatedAt: u.UpdatedAt,
         Username:  u.Username,
         Email:     u.Email,
+        AvatarURL: u.AvatarURL,
         Token:     u.Token,
     }
     
@@ -135,6 +110,30 @@ type UserPageResponse struct {
     Total    int64       `json:"total"`     // 总记录数
 }
 
-// 删除不需要的结构体
-// 删除 Pagination 结构体
-// 删除 PageResponse 结构体
+// Response 添加 WithDetails 方法
+func (r *Response) WithDetails(details string) *Response {
+    r.Message = r.Message + ": " + details
+    return r
+}
+
+
+// Token 状态码
+const (
+    TokenStatusValid   = 1    // token有效
+    TokenStatusInvalid = 4001 // token无效
+    TokenStatusExpired = 4002 // token过期
+    TokenStatusReplace = 4003 // token被替换（在其他设备登录）
+)
+
+// TokenErrorMessages token错误信息映射
+var TokenErrorMessages = map[int]string{
+    TokenStatusInvalid: "无效的访问凭证",
+    TokenStatusExpired: "访问凭证已过期",
+    TokenStatusReplace: "您的账号已在其他设备登录",
+}
+
+// TokenStatusResponse Token状态响应
+type TokenStatusResponse struct {
+    Status  int    `json:"status"`  // token状态码
+    Message string `json:"message"` // 状态描述
+}

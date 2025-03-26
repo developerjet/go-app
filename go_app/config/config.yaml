@@ -12,3 +12,6 @@ database:
 jwt:
   secret: your-secret-key
   expire: 24  # 小时
+
+image_host:
+  token: "4e13065e1167a6f76cd6c64b17bf5653"

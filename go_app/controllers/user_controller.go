@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"go_app/models"
 	"go_app/pkg/errcode"
 	"go_app/services"
@@ -8,6 +9,9 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+
+	"path/filepath"
+	"strings"
 )
 
 type UserController struct {
@@ -57,7 +61,7 @@ func (uc *UserController) Login(c *gin.Context) {
 
 	// 在 Login 方法中
 	loginResp := &models.LoginResponse{
-	    UserInfo: user.ToUserInfo(),
+		UserInfo: user.ToUserInfo(),
 	}
 
 	c.JSON(http.StatusOK, models.NewSuccess(loginResp, "登录成功"))
@@ -146,30 +150,30 @@ func (uc *UserController) UpdateUser(ctx *gin.Context) {
 // @Router /api/users/email [post]
 // UpdateEmail 方法中
 func (uc *UserController) UpdateEmail(ctx *gin.Context) {
-    var req models.EmailUpdateRequest
-    if err := ctx.ShouldBind(&req); err != nil {
-        ctx.JSON(http.StatusOK, models.NewError(errcode.InvalidParams))
-        return
-    }
+	var req models.EmailUpdateRequest
+	if err := ctx.ShouldBind(&req); err != nil {
+		ctx.JSON(http.StatusOK, models.NewError(errcode.InvalidParams))
+		return
+	}
 
-    if _, err := uc.userService.GetUserByEmail(req.Email); err == nil {
-        ctx.JSON(http.StatusOK, models.NewError(errcode.UserAlreadyExists))
-        return
-    }
+	if _, err := uc.userService.GetUserByEmail(req.Email); err == nil {
+		ctx.JSON(http.StatusOK, models.NewError(errcode.UserAlreadyExists))
+		return
+	}
 
-    user, err := uc.userService.GetUserByID(req.UserID)
-    if err != nil {
-        ctx.JSON(http.StatusOK, models.NewError(errcode.UserNotFound))
-        return
-    }
+	user, err := uc.userService.GetUserByID(req.UserID)
+	if err != nil {
+		ctx.JSON(http.StatusOK, models.NewError(errcode.UserNotFound))
+		return
+	}
 
-    user.Email = req.Email
-    if err := uc.userService.UpdateUserSafe(user); err != nil {
-        ctx.JSON(http.StatusOK, models.NewError(errcode.UserUpdateFailed))
-        return
-    }
+	user.Email = req.Email
+	if err := uc.userService.UpdateUserSafe(user); err != nil {
+		ctx.JSON(http.StatusOK, models.NewError(errcode.UserUpdateFailed))
+		return
+	}
 
-    ctx.JSON(http.StatusOK, models.NewSuccess(user.ToUserInfo(), "邮箱更新成功"))
+	ctx.JSON(http.StatusOK, models.NewSuccess(user.ToUserInfo(), "邮箱更新成功"))
 }
 
 // ChangePassword godoc
@@ -191,7 +195,7 @@ func (uc *UserController) ChangePassword(ctx *gin.Context) {
 		return
 	}
 
-	userId, exists := ctx.Get("userId")  // 改为 userId
+	userId, exists := ctx.Get("userId") // 改为 userId
 	if !exists {
 		ctx.JSON(http.StatusOK, models.NewError(errcode.Unauthorized))
 		return
@@ -218,32 +222,32 @@ func (uc *UserController) ChangePassword(ctx *gin.Context) {
 // @Security ApiKeyAuth
 // @Router /api/users [get]
 func (uc *UserController) ListUsers(ctx *gin.Context) {
-    // 获取分页参数
-    page, _ := strconv.Atoi(ctx.DefaultQuery("page", "1"))
-    pageSize, _ := strconv.Atoi(ctx.DefaultQuery("pageSize", "10"))
-    
-    // 获取分页数据
-    users, total, err := uc.userService.ListUsersWithPage(page, pageSize)
-    if err != nil {
-        ctx.JSON(http.StatusOK, models.NewError(errcode.ServerError))
-        return
-    }
-    
-    // 转换用户列表
-    userInfos := make([]*models.UserInfo, len(users))
-    for i, user := range users {
-        userInfos[i] = user.ToUserInfo()
-    }
-    
-    // 构造响应
-    response := &models.UserPageResponse{
-        List:     userInfos,
-        Page:     page,
-        PageSize: pageSize,
-        Total:    total,
-    }
-    
-    ctx.JSON(http.StatusOK, models.NewSuccess(response, "获取成功"))
+	// 获取分页参数
+	page, _ := strconv.Atoi(ctx.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(ctx.DefaultQuery("pageSize", "10"))
+
+	// 获取分页数据
+	users, total, err := uc.userService.ListUsersWithPage(page, pageSize)
+	if err != nil {
+		ctx.JSON(http.StatusOK, models.NewError(errcode.ServerError))
+		return
+	}
+
+	// 转换用户列表
+	userInfos := make([]*models.UserInfo, len(users))
+	for i, user := range users {
+		userInfos[i] = user.ToUserInfo()
+	}
+
+	// 构造响应
+	response := &models.UserPageResponse{
+		List:     userInfos,
+		Page:     page,
+		PageSize: pageSize,
+		Total:    total,
+	}
+
+	ctx.JSON(http.StatusOK, models.NewSuccess(response, "获取成功"))
 }
 
 // GetUser godoc
@@ -259,25 +263,25 @@ func (uc *UserController) ListUsers(ctx *gin.Context) {
 // @Security ApiKeyAuth
 // @Router /api/users/info [get]
 func (uc *UserController) GetUser(ctx *gin.Context) {
-    // 从 query 参数获取 userId
-    userIDStr := ctx.Query("userId")
-    if userIDStr == "" {
-        ctx.JSON(http.StatusOK, models.NewError(errcode.InvalidParams))
-        return
-    }
+	// 从 query 参数获取 userId
+	userIDStr := ctx.Query("userId")
+	if userIDStr == "" {
+		ctx.JSON(http.StatusOK, models.NewError(errcode.InvalidParams))
+		return
+	}
 
-    id, err := strconv.ParseUint(userIDStr, 10, 32)
-    if err != nil {
-        ctx.JSON(http.StatusOK, models.NewError(errcode.InvalidParams))
-        return
-    }
+	id, err := strconv.ParseUint(userIDStr, 10, 32)
+	if err != nil {
+		ctx.JSON(http.StatusOK, models.NewError(errcode.InvalidParams))
+		return
+	}
 
-    user, err := uc.userService.GetUserByIDSafe(uint(id))
-    if err != nil {
-        ctx.JSON(http.StatusOK, models.NewError(errcode.UserNotFound))
-        return
-    }
-    ctx.JSON(http.StatusOK, models.NewSuccess(user.ToUserInfo(), "获取成功"))
+	user, err := uc.userService.GetUserByIDSafe(uint(id))
+	if err != nil {
+		ctx.JSON(http.StatusOK, models.NewError(errcode.UserNotFound))
+		return
+	}
+	ctx.JSON(http.StatusOK, models.NewSuccess(user.ToUserInfo(), "获取成功"))
 }
 
 // DeleteUser godoc
@@ -295,17 +299,17 @@ func (uc *UserController) GetUser(ctx *gin.Context) {
 // DeleteUser 方法中
 // @Param request body models.UserIDRequest true "用户ID"
 func (uc *UserController) DeleteUser(ctx *gin.Context) {
-    var req models.UserIDRequest
-    if err := ctx.ShouldBind(&req); err != nil {
-        ctx.JSON(http.StatusOK, models.NewError(errcode.InvalidParams))
-        return
-    }
+	var req models.UserIDRequest
+	if err := ctx.ShouldBind(&req); err != nil {
+		ctx.JSON(http.StatusOK, models.NewError(errcode.InvalidParams))
+		return
+	}
 
-    if err := uc.userService.DeleteUser(req.UserID); err != nil {
-        ctx.JSON(http.StatusOK, models.NewError(errcode.UserDeleteFailed))
-        return
-    }
-    ctx.JSON(http.StatusOK, models.NewSuccess(nil, "删除成功"))
+	if err := uc.userService.DeleteUser(req.UserID); err != nil {
+		ctx.JSON(http.StatusOK, models.NewError(errcode.UserDeleteFailed))
+		return
+	}
+	ctx.JSON(http.StatusOK, models.NewSuccess(nil, "删除成功"))
 }
 
 // Logout godoc
@@ -319,7 +323,7 @@ func (uc *UserController) DeleteUser(ctx *gin.Context) {
 // @Security ApiKeyAuth
 // @Router /api/users/logout [post]
 func (uc *UserController) Logout(ctx *gin.Context) {
-	userId, exists := ctx.Get("userId")  // 改为 userId
+	userId, exists := ctx.Get("userId") // 改为 userId
 	if !exists {
 		ctx.JSON(http.StatusOK, models.NewError(errcode.Unauthorized))
 		return
@@ -330,4 +334,93 @@ func (uc *UserController) Logout(ctx *gin.Context) {
 		return
 	}
 	ctx.JSON(http.StatusOK, models.NewSuccess(nil, "退出成功"))
+}
+
+// UploadAvatar godoc
+// @Summary 上传用户头像
+// @Description 上传并更新用户头像
+// @Tags 用户管理
+// @Accept multipart/form-data
+// @Produce json
+// @Param userId formData int true "用户ID"
+// @Param avatar formData file true "头像文件（支持jpg、jpeg、png、gif，最大10MB）"
+// @Success 200 {object} models.Response{data=map[string]string} "上传成功，返回头像URL"
+// @Failure 400 {object} models.Response "请求参数错误"
+// @Failure 401 {object} models.Response "未授权"
+// @Failure 500 {object} models.Response "服务器内部错误"
+// @Security ApiKeyAuth
+// @Router /api/users/avatar [post]
+func (uc *UserController) UploadAvatar(c *gin.Context) {
+    // 从请求参数获取 userId
+    userIDStr := c.PostForm("userId")
+    fmt.Printf("接收到的 userId: %s\n", userIDStr)
+    
+    if userIDStr == "" {
+        fmt.Printf("未找到 userId 参数\n")
+        c.JSON(http.StatusOK, models.NewError(errcode.InvalidParams))
+        return
+    }
+
+    userID, err := strconv.ParseUint(userIDStr, 10, 32)
+    if err != nil {
+        fmt.Printf("userId 转换失败: %v\n", err)
+        c.JSON(http.StatusOK, models.NewError(errcode.InvalidParams))
+        return
+    }
+
+    file, err := c.FormFile("avatar")
+    if err != nil {
+        fmt.Printf("获取文件失败: %v\n", err)
+        c.JSON(http.StatusOK, models.NewError(errcode.InvalidParams).WithDetails("文件上传失败: "+err.Error()))
+        return
+    }
+
+    fmt.Printf("上传文件信息: 名称=%s, 大小=%d, 类型=%s\n", file.Filename, file.Size, file.Header.Get("Content-Type"))
+
+    if !isValidImageFile(file.Filename) {
+        c.JSON(http.StatusOK, models.NewError(errcode.InvalidParams).WithDetails("不支持的文件类型"))
+        return
+    }
+
+    // 修改文件大小限制：0 < size <= 10MB
+    if file.Size <= 0 {
+        c.JSON(http.StatusOK, models.NewError(errcode.InvalidParams).WithDetails("文件大小不能为空"))
+        return
+    }
+    if file.Size > 10<<20 { // 10MB
+        c.JSON(http.StatusOK, models.NewError(errcode.InvalidParams).WithDetails("文件大小超过限制(最大10MB)"))
+        return
+    }
+
+    avatarURL, err := uc.userService.SaveAvatar(uint(userID), file)
+    if err != nil {
+        fmt.Printf("保存头像失败: %v\n", err)
+        c.JSON(http.StatusOK, models.NewError(errcode.ServerError).WithDetails("保存头像失败: "+err.Error()))
+        return
+    }
+
+    // 直接返回图床 URL，不需要拼接 baseURL
+    c.JSON(http.StatusOK, models.NewSuccess(map[string]string{"avatarUrl": avatarURL}, "上传成功"))
+}
+
+// 增加 MIME 类型验证
+func isValidImageMimeType(mimeType string) bool {
+    validTypes := map[string]bool{
+        "image/jpeg": true,
+        "image/png":  true,
+        "image/gif":  true,
+    }
+    return validTypes[mimeType]
+}
+
+// 辅助函数：验证图片文件类型
+func isValidImageFile(filename string) bool {
+	ext := strings.ToLower(filepath.Ext(filename))
+	validExts := map[string]bool{
+		".jpg":  true,
+		".jpeg": true,
+		".png":  true,
+		".gif":  true,
+	}
+	return validExts[ext]
 }

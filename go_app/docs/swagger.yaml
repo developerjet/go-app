@@ -84,6 +84,8 @@ definitions:
     type: object
   models.UserInfo:
     properties:
+      avatarUrl:
+        type: string
       createdAt:
         type: string
       deletedAt:
@@ -271,6 +273,53 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: 获取用户列表
+      tags:
+      - 用户管理
+  /api/users/avatar:
+    post:
+      consumes:
+      - multipart/form-data
+      description: 上传并更新用户头像
+      parameters:
+      - description: 用户ID
+        in: formData
+        name: userId
+        required: true
+        type: integer
+      - description: 头像文件（支持jpg、jpeg、png、gif，最大10MB）
+        in: formData
+        name: avatar
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 上传成功，返回头像URL
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.Response'
+            - properties:
+                data:
+                  additionalProperties:
+                    type: string
+                  type: object
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/models.Response'
+        "401":
+          description: 未授权
+          schema:
+            $ref: '#/definitions/models.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/models.Response'
+      security:
+      - ApiKeyAuth: []
+      summary: 上传用户头像
       tags:
       - 用户管理
   /api/users/email:

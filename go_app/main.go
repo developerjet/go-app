@@ -109,4 +109,7 @@ func main() {
     if err := r.Run(serverAddr); err != nil {
         log.Fatal("启动服务器失败:", err)
     }
+    
+    // 添加静态文件服务
+    r.Static("/uploads", "./uploads")
 }

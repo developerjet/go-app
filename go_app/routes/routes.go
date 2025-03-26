@@ -25,11 +25,12 @@ func SetupRoutes(api *gin.RouterGroup, userController *controllers.UserControlle
     users.Use(middleware.AuthMiddleware())
     {
         users.GET("", userController.ListUsers)
-        users.GET("/info", userController.GetUser)         // 改为 query 参数
-        users.POST("/update", userController.UpdateUser)   // 改为 body 参数
-        users.POST("/delete", userController.DeleteUser)   // 改为 body 参数
-        users.POST("/email", userController.UpdateEmail)   // 改为 body 参数
+        users.GET("/info", userController.GetUser)
+        users.POST("/update", userController.UpdateUser)
+        users.POST("/delete", userController.DeleteUser)
+        users.POST("/email", userController.UpdateEmail)
         users.POST("/password", userController.ChangePassword)
         users.POST("/logout", userController.Logout)
+        users.POST("/avatar", userController.UploadAvatar)  // 添加头像上传路由
     }
 }
