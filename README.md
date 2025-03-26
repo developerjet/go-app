@@ -23,6 +23,12 @@ Go语言中文学习文档
 - 修改用户密码
 - 删除用户
 
+### 👤 用户头像
+- 支持上传用户头像
+- 支持 jpg、jpeg、png、gif 格式
+- 图片存储使用 ImgBB 图床服务
+- 自动管理历史头像
+
 ### 🛡️ 安全特性
 - 密码加密存储
 - JWT 认证保护
@@ -267,4 +273,21 @@ kill -9 <PID>
 
 # 终止项目进程
 pkill -f "go_app"
+```
+
+
+## 图片上传配置
+
+### ImgBB 配置
+1. 获取 API Key
+- 访问 https://api.imgbb.com/
+- 注册账号并获取 API Key
+- 在配置文件中设置 API Key
+
+2. 配置说明
+```go
+// config/config.go
+ImageHost struct {
+    Token string `yaml:"token"` // ImgBB API Key
+}
 ```
