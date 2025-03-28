@@ -124,10 +124,9 @@ const docTemplate = `{
         },
         "/api/register": {
             "post": {
-                "description": "新用户注册",
+                "description": "新用户注册，支持设置性别等基本信息",
                 "consumes": [
-                    "application/json",
-                    "application/x-www-form-urlencoded"
+                    "application/json"
                 ],
                 "produces": [
                     "application/json"
@@ -322,6 +321,66 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "服务器内部错误",
+                        "schema": {
+                            "$ref": "#/definitions/models.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/users/delete": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "删除指定用户",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "用户管理"
+                ],
+                "summary": "删除用户",
+                "parameters": [
+                    {
+                        "description": "用户ID",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.UserIDRequest"
+                        }
+                    },
+                    {
+                        "description": "用户ID",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.UserIDRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "删除成功",
+                        "schema": {
+                            "$ref": "#/definitions/models.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/models.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "用户不存在",
                         "schema": {
                             "$ref": "#/definitions/models.Response"
                         }
@@ -539,131 +598,6 @@ const docTemplate = `{
                     }
                 }
             }
-        },
-        "/api/users/update": {
-            "post": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "更新用户基本信息",
-                "consumes": [
-                    "application/json",
-                    "application/x-www-form-urlencoded"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "用户管理"
-                ],
-                "summary": "更新用户信息",
-                "parameters": [
-                    {
-                        "description": "用户信息",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.User"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "更新成功",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/models.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/models.UserInfo"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "400": {
-                        "description": "请求参数错误",
-                        "schema": {
-                            "$ref": "#/definitions/models.Response"
-                        }
-                    },
-                    "404": {
-                        "description": "用户不存在",
-                        "schema": {
-                            "$ref": "#/definitions/models.Response"
-                        }
-                    }
-                }
-            }
-        },
-        "/users/delete": {
-            "post": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "删除指定用户",
-                "consumes": [
-                    "application/json",
-                    "application/x-www-form-urlencoded"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "用户管理"
-                ],
-                "summary": "删除用户",
-                "parameters": [
-                    {
-                        "description": "用户ID",
-                        "name": "user",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.UserIDRequest"
-                        }
-                    },
-                    {
-                        "description": "用户ID",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.UserIDRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/models.Response"
-                        }
-                    },
-                    "400": {
-                        "description": "请求参数错误",
-                        "schema": {
-                            "$ref": "#/definitions/models.Response"
-                        }
-                    },
-                    "404": {
-                        "description": "用户不存在",
-                        "schema": {
-                            "$ref": "#/definitions/models.Response"
-                        }
-                    }
-                }
-            }
         }
     },
     "definitions": {
@@ -678,10 +612,12 @@ const docTemplate = `{
             ],
             "properties": {
                 "email": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "newemail@example.com"
                 },
                 "userId": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 1
                 }
             }
         },
@@ -703,6 +639,7 @@ const docTemplate = `{
             }
         },
         "models.LoginResponse": {
+            "description": "用户登录成功响应",
             "type": "object",
             "properties": {
                 "userInfo": {
@@ -752,27 +689,23 @@ const docTemplate = `{
             }
         },
         "models.Response": {
+            "description": "API 统一响应格式",
             "type": "object",
             "properties": {
                 "code": {
-                    "description": "状态码 200成功，其他失败",
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 200
                 },
-                "data": {
-                    "description": "数据"
-                },
+                "data": {},
                 "message": {
-                    "description": "提示信息",
-                    "type": "string"
+                    "type": "string",
+                    "example": "操作成功"
                 },
                 "timestamp": {
-                    "description": "时间戳",
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 1704067200
                 }
             }
-        },
-        "models.User": {
-            "type": "object"
         },
         "models.UserIDRequest": {
             "type": "object",
@@ -781,61 +714,82 @@ const docTemplate = `{
             ],
             "properties": {
                 "userId": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 1
                 }
             }
         },
         "models.UserInfo": {
+            "description": "用户详细信息响应结构",
             "type": "object",
             "properties": {
                 "avatarUrl": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "https://example.com/avatar.jpg"
+                },
+                "birthday": {
+                    "type": "string",
+                    "example": "1990-01-01T00:00:00+08:00"
                 },
                 "createdAt": {
-                    "type": "string"
-                },
-                "deletedAt": {
-                    "description": "改为 string 类型",
-                    "type": "string"
+                    "type": "string",
+                    "example": "2024-01-01T00:00:00+08:00"
                 },
                 "email": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "zhangsan@example.com"
                 },
-                "token": {
-                    "type": "string"
+                "gender": {
+                    "type": "string",
+                    "enum": [
+                        "male",
+                        "female",
+                        "other"
+                    ],
+                    "example": "male"
+                },
+                "hobbies": {
+                    "type": "string",
+                    "example": "读书,游泳,旅行"
                 },
                 "updatedAt": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "2024-01-01T00:00:00+08:00"
                 },
                 "userId": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 1
                 },
                 "username": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "张三"
                 }
             }
         },
         "models.UserPageResponse": {
+            "description": "用户分页列表响应结构",
             "type": "object",
             "properties": {
                 "list": {
-                    "description": "用户列表",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/models.UserInfo"
                     }
                 },
                 "page": {
-                    "description": "当前页码",
-                    "type": "integer"
+                    "type": "integer",
+                    "minimum": 1,
+                    "example": 1
                 },
                 "pageSize": {
-                    "description": "每页数量",
-                    "type": "integer"
+                    "type": "integer",
+                    "maximum": 100,
+                    "minimum": 1,
+                    "example": 10
                 },
                 "total": {
-                    "description": "总记录数",
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 100
                 }
             }
         }

@@ -5,8 +5,10 @@ definitions:
   models.EmailUpdateRequest:
     properties:
       email:
+        example: newemail@example.com
         type: string
       userId:
+        example: 1
         type: integer
     required:
     - email
@@ -25,6 +27,7 @@ definitions:
     - password
     type: object
   models.LoginResponse:
+    description: 用户登录成功响应
     properties:
       userInfo:
         $ref: '#/definitions/models.UserInfo'
@@ -60,63 +63,80 @@ definitions:
     - username
     type: object
   models.Response:
+    description: API 统一响应格式
     properties:
       code:
-        description: 状态码 200成功，其他失败
+        example: 200
         type: integer
-      data:
-        description: 数据
+      data: {}
       message:
-        description: 提示信息
+        example: 操作成功
         type: string
       timestamp:
-        description: 时间戳
+        example: 1704067200
         type: integer
-    type: object
-  models.User:
     type: object
   models.UserIDRequest:
     properties:
       userId:
+        example: 1
         type: integer
     required:
     - userId
     type: object
   models.UserInfo:
+    description: 用户详细信息响应结构
     properties:
       avatarUrl:
+        example: https://example.com/avatar.jpg
+        type: string
+      birthday:
+        example: "1990-01-01T00:00:00+08:00"
         type: string
       createdAt:
-        type: string
-      deletedAt:
-        description: 改为 string 类型
+        example: "2024-01-01T00:00:00+08:00"
         type: string
       email:
+        example: zhangsan@example.com
         type: string
-      token:
+      gender:
+        enum:
+        - male
+        - female
+        - other
+        example: male
+        type: string
+      hobbies:
+        example: 读书,游泳,旅行
         type: string
       updatedAt:
+        example: "2024-01-01T00:00:00+08:00"
         type: string
       userId:
+        example: 1
         type: integer
       username:
+        example: 张三
         type: string
     type: object
   models.UserPageResponse:
+    description: 用户分页列表响应结构
     properties:
       list:
-        description: 用户列表
         items:
           $ref: '#/definitions/models.UserInfo'
         type: array
       page:
-        description: 当前页码
+        example: 1
+        minimum: 1
         type: integer
       pageSize:
-        description: 每页数量
+        example: 10
+        maximum: 100
+        minimum: 1
         type: integer
       total:
-        description: 总记录数
+        example: 100
         type: integer
     type: object
 host: localhost:8080
@@ -199,8 +219,7 @@ paths:
     post:
       consumes:
       - application/json
-      - application/x-www-form-urlencoded
-      description: 新用户注册
+      description: 新用户注册，支持设置性别等基本信息
       parameters:
       - description: 用户注册信息
         in: body
@@ -320,6 +339,44 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: 上传用户头像
+      tags:
+      - 用户管理
+  /api/users/delete:
+    post:
+      consumes:
+      - application/json
+      description: 删除指定用户
+      parameters:
+      - description: 用户ID
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.UserIDRequest'
+      - description: 用户ID
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.UserIDRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 删除成功
+          schema:
+            $ref: '#/definitions/models.Response'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/models.Response'
+        "404":
+          description: 用户不存在
+          schema:
+            $ref: '#/definitions/models.Response'
+      security:
+      - ApiKeyAuth: []
+      summary: 删除用户
       tags:
       - 用户管理
   /api/users/email:
@@ -448,83 +505,6 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: 修改密码
-      tags:
-      - 用户管理
-  /api/users/update:
-    post:
-      consumes:
-      - application/json
-      - application/x-www-form-urlencoded
-      description: 更新用户基本信息
-      parameters:
-      - description: 用户信息
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/models.User'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 更新成功
-          schema:
-            allOf:
-            - $ref: '#/definitions/models.Response'
-            - properties:
-                data:
-                  $ref: '#/definitions/models.UserInfo'
-              type: object
-        "400":
-          description: 请求参数错误
-          schema:
-            $ref: '#/definitions/models.Response'
-        "404":
-          description: 用户不存在
-          schema:
-            $ref: '#/definitions/models.Response'
-      security:
-      - ApiKeyAuth: []
-      summary: 更新用户信息
-      tags:
-      - 用户管理
-  /users/delete:
-    post:
-      consumes:
-      - application/json
-      - application/x-www-form-urlencoded
-      description: 删除指定用户
-      parameters:
-      - description: 用户ID
-        in: body
-        name: user
-        required: true
-        schema:
-          $ref: '#/definitions/models.UserIDRequest'
-      - description: 用户ID
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/models.UserIDRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/models.Response'
-        "400":
-          description: 请求参数错误
-          schema:
-            $ref: '#/definitions/models.Response'
-        "404":
-          description: 用户不存在
-          schema:
-            $ref: '#/definitions/models.Response'
-      security:
-      - ApiKeyAuth: []
-      summary: 删除用户
       tags:
       - 用户管理
 securityDefinitions:

@@ -17,31 +17,31 @@ type UserService struct {
 
 // SaveAvatar 保存用户头像到图床并更新数据库
 func (s *UserService) SaveAvatar(userID uint, file *multipart.FileHeader) (string, error) {
-    // 打开文件
-    src, err := file.Open()
-    if err != nil {
-        return "", fmt.Errorf("打开文件失败: %v", err)
-    }
-    defer src.Close()
+	// 打开文件
+	src, err := file.Open()
+	if err != nil {
+		return "", fmt.Errorf("打开文件失败: %v", err)
+	}
+	defer src.Close()
 
-    // 调用图床 API 上传图片
-    imageURL, err := utils.UploadToImageHost(file)
-    if err != nil {
-        return "", fmt.Errorf("上传图片失败: %v", err)
-    }
+	// 调用图床 API 上传图片
+	imageURL, err := utils.UploadToImageHost(file)
+	if err != nil {
+		return "", fmt.Errorf("上传图片失败: %v", err)
+	}
 
-    // 更新用户头像URL
-    var user models.User
-    if err := s.db.First(&user, userID).Error; err != nil {
-        return "", fmt.Errorf("查找用户失败: %v", err)
-    }
+	// 更新用户头像URL
+	var user models.User
+	if err := s.db.First(&user, userID).Error; err != nil {
+		return "", fmt.Errorf("查找用户失败: %v", err)
+	}
 
-    user.AvatarURL = imageURL
-    if err := s.db.Save(&user).Error; err != nil {
-        return "", fmt.Errorf("更新用户头像失败: %v", err)
-    }
+	user.AvatarURL = imageURL
+	if err := s.db.Save(&user).Error; err != nil {
+		return "", fmt.Errorf("更新用户头像失败: %v", err)
+	}
 
-    return imageURL, nil
+	return imageURL, nil
 }
 
 // 保留这个已实现的版本
@@ -64,10 +64,10 @@ func (s *UserService) GetUserByID(id uint) (*models.User, error) {
 }
 
 func (s *UserService) GetUserByEmail(email string) (*models.User, error) {
-    var user models.User
-    // 确保查询包含所有必要字段
-    err := s.db.Where("email = ?", email).First(&user).Error
-    return &user, err
+	var user models.User
+	// 确保查询包含所有必要字段
+	err := s.db.Where("email = ?", email).First(&user).Error
+	return &user, err
 }
 
 func (s *UserService) UpdateUser(user *models.User) error {
@@ -111,42 +111,45 @@ func (s *UserService) GenerateToken(user *models.User) (string, error) {
 
 // Login 用户登录
 func (s *UserService) Login(email, password string) (*models.User, string, error) {
-	var user models.User
-	// 先查询所有必要字段，包括密码
-	if err := s.db.Where("email = ?", email).First(&user).Error; err != nil {
-		return nil, "", errors.New("用户不存在")
-	}
+    var user models.User
+    // 查询时包含 TokenVersion
+    if err := s.db.Select("id, username, email, password, avatar_url, token_version, created_at, updated_at").
+        Where("email = ?", email).First(&user).Error; err != nil {
+        return nil, "", errors.New("用户不存在")
+    }
+    
+    // 验证密码
+    if err := s.VerifyPassword(user.Password, password); err != nil {
+        return nil, "", errors.New("密码错误")
+    }
 
-	// 验证密码
-	if err := s.VerifyPassword(user.Password, password); err != nil {
-		return nil, "", errors.New("密码错误")
-	}
+    // 生成新的 token
+    token, err := s.GenerateToken(&user)
+    if err != nil {
+        return nil, "", fmt.Errorf("生成token失败: %v", err)
+    }
 
-	// 生成新的 token
-	token, err := s.GenerateToken(&user)
-	if err != nil {
-		return nil, "", fmt.Errorf("生成token失败: %v", err)
-	}
+    // 将 token 设置到用户对象中，并清除敏感信息
+    user.Token = token
+    user.Password = ""
 
-	// 将 token 设置到用户对象中，并清除敏感信息
-	user.Token = token
-	user.Password = ""
+    // 重新查询需要返回的字段
+    // 重新查询完整的用户信息
+    var safeUser models.User
+    if err := s.db.Select("id, username, email, avatar_url, birthday, gender, hobbies, created_at, updated_at").
+        First(&safeUser, user.ID).Error; err != nil {
+        return nil, "", fmt.Errorf("获取用户信息失败: %v", err)
+    }
+    safeUser.Token = token
 
-	// 重新查询需要返回的字段
-	var safeUser models.User
-	if err := s.db.Select("id, username, email, avatar_url, created_at, updated_at").
-		First(&safeUser, user.ID).Error; err != nil {
-		return nil, "", fmt.Errorf("获取用户信息失败: %v", err)
-	}
-	safeUser.Token = token
-
-	return &safeUser, token, nil
+    return &safeUser, token, nil
 }
 
 // GetUserByIDSafe 安全地获取用户信息，不返回敏感字段
 func (s *UserService) GetUserByIDSafe(id uint) (*models.User, error) {
     var user models.User
-    err := s.db.Select("id, username, email, avatar_url, created_at, updated_at").First(&user, id).Error
+    err := s.db.Select("id, username, email, avatar_url, birthday, gender, hobbies, created_at, updated_at").
+        First(&user, id).Error
     if err != nil {
         return nil, errors.New("用户不存在")
     }
@@ -155,12 +158,12 @@ func (s *UserService) GetUserByIDSafe(id uint) (*models.User, error) {
 
 // ListUsersSafe 安全地获取用户列表，不返回敏感字段
 func (s *UserService) ListUsersSafe() ([]models.User, error) {
-    var users []models.User
-    err := s.db.Select("id, username, email, avatar_url, created_at, updated_at").Find(&users).Error
-    if err != nil {
-        return nil, errors.New("获取用户列表失败")
-    }
-    return users, err
+	var users []models.User
+	err := s.db.Select("id, username, email, avatar_url, created_at, updated_at").Find(&users).Error
+	if err != nil {
+		return nil, errors.New("获取用户列表失败")
+	}
+	return users, err
 }
 
 // ListUsersWithPage 分页获取用户列表
@@ -168,17 +171,14 @@ func (s *UserService) ListUsersWithPage(page, pageSize int) ([]*models.User, int
     var users []*models.User
     var total int64
 
-    // 计算偏移量
-    offset := (page - 1) * pageSize
-
-    // 获取总记录数
     if err := s.db.Model(&models.User{}).Count(&total).Error; err != nil {
         return nil, 0, err
     }
 
-    // 获取分页数据，添加 avatar_url 字段
-    if err := s.db.Select("id, username, email, avatar_url, created_at, updated_at").
-        Offset(offset).Limit(pageSize).Find(&users).Error; err != nil {
+    if err := s.db.Select("id, username, email, avatar_url, birthday, gender, hobbies, created_at, updated_at").
+        Offset((page - 1) * pageSize).
+        Limit(pageSize).
+        Find(&users).Error; err != nil {
         return nil, 0, err
     }
 
@@ -187,11 +187,23 @@ func (s *UserService) ListUsersWithPage(page, pageSize int) ([]*models.User, int
 
 // UpdateUserSafe 安全地更新用户信息，只允许更新指定字段
 func (s *UserService) UpdateUserSafe(user *models.User) error {
-	result := s.db.Model(user).Select("username", "email").Updates(user)
-	if result.Error != nil {
-		return errors.New("更新用户信息失败")
-	}
-	return nil
+    // 使用事务确保更新的原子性
+    return s.db.Transaction(func(tx *gorm.DB) error {
+        result := tx.Model(user).
+            Select("username", "avatar_url", "birthday", "gender", "hobbies", "updated_at").
+            Updates(user)
+        
+        if result.Error != nil {
+            return errors.New("更新用户信息失败")
+        }
+        
+        // 验证更新是否成功
+        if result.RowsAffected == 0 {
+            return errors.New("未找到要更新的用户")
+        }
+        
+        return nil
+    })
 }
 
 // ListUsers 获取用户列表
@@ -217,16 +229,16 @@ func (s *UserService) UpdateUserInfo(user *models.User) error {
 
 // ChangePassword 修改用户密码
 func (s *UserService) ChangePassword(userID uint, oldPassword, newPassword string) error {
-    var user models.User
-    // 确保查询包含所有字段，特别是密码字段
-    if err := s.db.First(&user, userID).Error; err != nil {
-        return errors.New("用户不存在")
-    }
+	var user models.User
+	// 确保查询包含所有字段，特别是密码字段
+	if err := s.db.First(&user, userID).Error; err != nil {
+		return errors.New("用户不存在")
+	}
 
-    // 验证旧密码
-    if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(oldPassword)); err != nil {
-        return errors.New("旧密码不正确")
-    }
+	// 验证旧密码
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(oldPassword)); err != nil {
+		return errors.New("旧密码不正确")
+	}
 
 	// 加密新密码
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
@@ -244,18 +256,18 @@ func (s *UserService) ChangePassword(userID uint, oldPassword, newPassword strin
 
 // Logout 用户退出
 func (s *UserService) Logout(userID uint) error {
-	var user models.User
-	if err := s.db.First(&user, userID).Error; err != nil {
-		return errors.New("用户不存在")
-	}
+    var user models.User
+    // 查询时包含 TokenVersion
+    if err := s.db.Select("id, token_version").First(&user, userID).Error; err != nil {
+        return errors.New("用户不存在")
+    }
 
-	// 增加 token 版本号使当前 token 失效
-	user.TokenVersion++
-	if err := s.db.Save(&user).Error; err != nil {
-		return errors.New("登出失败")
-	}
+    user.TokenVersion++
+    if err := s.db.Model(&user).Update("token_version", user.TokenVersion).Error; err != nil {
+        return errors.New("登出失败")
+    }
 
-	return nil
+    return nil
 }
 
 // 添加新方法
