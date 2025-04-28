@@ -56,15 +56,20 @@ func (uc *UserController) Login(c *gin.Context) {
 		return
 	}
 
-	// 将 token 只设置到 user 对象中
-	user.Token = token
-
-	// 在 Login 方法中
-	loginResp := &models.LoginResponse{
-		UserInfo: user.ToUserInfo(),
+	// 删除这两行，因为它们是多余的
+	// // 将 token 设置到 user 对象中
+	// user.Token = token
+	
+	// 保持这个响应结构
+	response := struct {
+	    *models.UserInfo
+	    Token string `json:"token"`
+	}{
+	    UserInfo: user.ToUserInfo(),
+	    Token:    token,
 	}
-
-	c.JSON(http.StatusOK, models.NewSuccess(loginResp, "登录成功"))
+	
+	c.JSON(http.StatusOK, models.NewSuccess(response, "登录成功"))
 }
 
 // Register godoc
